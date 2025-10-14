@@ -45,12 +45,39 @@ final class PermissionManager {
         }
     }
     
+    /// 检查并请求所有权限（辅助功能和麦克风）
+    func checkAllPermissions(completion: @escaping ([PermissionType: Bool]) -> Void) {
+        let group = DispatchGroup()
+        let types: [PermissionType] = [.accessibility, .microphone]
+        
+        var results: [PermissionType: Bool] = [:]
+        
+        for type in types {
+            let status = checkStatus(type)
+            log.info("\(type) 权限状态: \(status)")
+            
+            if status != .granted {
+                group.enter()
+                request(type) { granted in
+                    log.info("\(type) 权限申请结果: \(granted)")
+                    results[type] = granted
+                    group.leave()
+                }
+            } else {
+                results[type] = true
+            }
+        }
+        
+        group.notify(queue: .main) {
+            completion(results)
+        }
+    }
+    
     func requestAccessibility(completion: @escaping (Bool) -> Void) {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): false]
         let trusted = AXIsProcessTrustedWithOptions(options as CFDictionary)
         
         if !trusted {
-            log.warning("辅助功能权限未授予，请在系统偏好设置中授权")
             openSystemPreferences(for: .accessibility)
         }
         
@@ -69,19 +96,19 @@ final class PermissionManager {
     private func requestMicrophone(completion: @escaping (Bool) -> Void) {
         switch microphoneStatus() {
         case .granted:
-            return
+            completion(true)
         case .denied:
             showMicrophonePermissionAlert()
+            completion(false)
         case .notDetermined:
             Task {
                 let granted = await AVCaptureDevice.requestAccess(for: .audio)
                 await MainActor.run {
-                    log.info("麦克风权限: \(granted ? "已授予" : "被拒绝")")
                     completion(granted)
                 }
             }
         @unknown default:
-            break
+            completion(false)
         }
     }
     
