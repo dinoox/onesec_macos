@@ -7,9 +7,9 @@
 
 import Foundation
 
-@MainActor
-class SignalHandler {
-    static let shared = SignalHandler()
+final class SignalHandler {
+    nonisolated(unsafe) static let shared = SignalHandler()
+    private let lock = NSLock()
     private var isShuttingDown = false
     
     func setupSignalHandlers() {
@@ -23,20 +23,13 @@ class SignalHandler {
             SignalHandler.shared.gracefulShutdown()
         }
         
-        signal(SIGHUP) { _ in
-            log.info("收到 SIGHUP 信号 (终端关闭)")
-            SignalHandler.shared.gracefulShutdown()
-        }
-        
-        signal(SIGQUIT) { _ in
-            log.info("收到 SIGQUIT 信号")
-            SignalHandler.shared.gracefulShutdown()
-        }
-        
         log.info("信号处理器设置完成")
     }
     
     func gracefulShutdown() {
+        lock.lock()
+        defer { lock.unlock() }
+        
         guard !isShuttingDown else { return }
         isShuttingDown = true
         

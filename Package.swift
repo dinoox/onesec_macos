@@ -17,8 +17,8 @@ let package = Package(
     ],
     dependencies: [
         .package(url: "https://github.com/daltoniam/Starscream.git", from: "4.0.0"),
-        .package(url: "https://github.com/apple/swift-log", from: "1.6.0"),
         .package(url: "https://github.com/SwiftyBeaver/SwiftyBeaver.git", .upToNextMajor(from: "2.0.0")),
+        .package(url: "https://github.com/apple/swift-argument-parser", from: "1.3.0"),
     ],
     targets: [
         // Targets are the basic building blocks of a package, defining a module or a test suite.
@@ -27,8 +27,8 @@ let package = Package(
             name: "OnesecCore",
             dependencies: [
                 .product(name: "Starscream", package: "Starscream"),
-                .product(name: "Logging", package: "swift-log"),
                 .product(name: "SwiftyBeaver", package: "SwiftyBeaver"),
+                .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
             path: "Sources"
         ),
