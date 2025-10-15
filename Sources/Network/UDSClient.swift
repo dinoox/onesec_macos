@@ -8,12 +8,17 @@
 import Foundation
 import Network
 
-enum UDSConnState {
+enum ConnState {
     case disconnected // 未连接
     case connecting // 连接中
     case failed // 连接失败
     case connected // 已连接
     case cancelled // 取消连接
+}
+
+enum UDSClientError: Error {
+    case stringConversionFailed
+    case dataConversionFailed
 }
 
 protocol UDSReceiveDelegate: AnyObject {
@@ -45,7 +50,7 @@ protocol UDSReceiveDelegate: AnyObject {
 
 final class UDSClient: @unchecked Sendable {
     private var connection: NWConnection?
-    private var connectionState: UDSConnState = .disconnected
+    private var connectionState: ConnState = .disconnected
 
     private let queue = DispatchQueue(label: "uds.client.queue")
     private var messsageBuffer = Data()
@@ -61,13 +66,13 @@ final class UDSClient: @unchecked Sendable {
     func connect() {
         let udsChannel = Config.UDS_CHANNEL
 
-        guard connectionState == .connecting else {
-            log.warning("UDSClient: 正在连接中，跳过重复连接")
+        guard connectionState != .connecting else {
+            log.warning("detect connecting... return")
             return
         }
 
         guard FileManager.default.fileExists(atPath: udsChannel) else {
-            log.warning("UDSClient Socket 文件不存在")
+            log.warning("socket file not exist")
             return
         }
 
@@ -79,15 +84,15 @@ final class UDSClient: @unchecked Sendable {
         connection!.stateUpdateHandler = { [weak self] state in
             guard let self = self else { return }
 
-            log.debug("UDSClient: 当前连接状态 - \(state)")
             switch state {
             case .ready:
                 connectionState = .connected
                 startMessagePolling()
+                log.debug("connected")
             case .failed: connectionState = .failed
             case .cancelled: connectionState = .cancelled
             default:
-                log.warning("UDSClient: 当前连接状态 - \(state)")
+                log.debug("current connection state - \(state)")
             }
         }
 
@@ -100,7 +105,7 @@ final class UDSClient: @unchecked Sendable {
         connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self] data, _, isComplete, err in
             guard let self = self else { return }
             guard err == nil else {
-                log.error("UDSClient: 接收消息失败 - \(err!)")
+                log.error("reveive message err: - \(err!)")
                 return
             }
 
@@ -142,11 +147,11 @@ final class UDSClient: @unchecked Sendable {
               let timestamp = json["timestamp"] as? Int64,
               let type = MessageType(rawValue: typeString)
         else {
-            log.debug("UDSClient: 无法解析消息 - \(message)")
+            log.debug("cannot parse message - \(message)")
             return
         }
 
-        log.debug("UDSClient: 收到消息类型 - \(typeString)")
+        log.debug("reveive message type - \(typeString) \(json)")
 
         switch type {
         case .hotkeySetting:
@@ -156,7 +161,7 @@ final class UDSClient: @unchecked Sendable {
         case .initConfig:
             handleInitConfigMessage(json: json, timestamp: timestamp)
         default:
-            log.debug("UDS 客户端: 忽略消息类型 - \(typeString)")
+            log.debug("ignore message type- \(typeString)")
         }
     }
 
@@ -198,7 +203,7 @@ final class UDSClient: @unchecked Sendable {
         let hotkeyConfigs = data["hotkey_configs"] as? [[String: Any]]
 
         if authToken != nil {
-            log.info("UDS 客户端: 初始化 Auth Token")
+            log.info("Init Auth Token")
         }
 
         if let hotkeyConfigs = hotkeyConfigs {
@@ -217,5 +222,75 @@ final class UDSClient: @unchecked Sendable {
             hotkeyConfigs: hotkeyConfigs,
             timestamp: timestamp
         )
+    }
+}
+
+extension UDSClient {
+    func sendStartRecording(recognitionMode: String) {
+        let data: [String: Any] = [
+            "recognition_mode": recognitionMode
+        ]
+
+        sendJSONMessage(WebSocketMessage.create(type: .startRecording, data: data).toJSON())
+        log.debug("Send start recording: \(recognitionMode)")
+    }
+
+    func sendStopRecording() {
+        sendJSONMessage(WebSocketMessage.create(type: .stopRecording).toJSON())
+        log.debug("Send stop recording")
+    }
+
+    func sendModeUpgrade(fromMode: String, toMode: String, focusContext: FocusContext? = nil) {
+        let data: [String: Any] = [
+            "from_mode": fromMode,
+            "to_mode": toMode
+        ]
+
+        // UDS 消息中不包含焦点上下文信息
+        sendJSONMessage(WebSocketMessage.create(type: .modeUpgrade, data: data).toJSON())
+        log.info("Send mode upgrade: \(fromMode) → \(toMode)")
+    }
+
+    func sendAuthTokenFailed(reason: String, statusCode: Int? = nil) {
+        guard connectionState == .connected else {
+            log.warning("Client not connected, cant send auth token failed")
+            return
+        }
+
+        var data: [String: Any] = [
+            "reason": reason
+        ]
+
+        if let statusCode = statusCode {
+            data["status_code"] = statusCode
+        }
+
+        sendJSONMessage(WebSocketMessage.create(type: .authTokenFailed, data: data).toJSON())
+        log.info("Client send auth token failed: \(reason), code: \(statusCode ?? 0)")
+    }
+
+    func sendJSONMessage(_ message: [String: Any]) {
+        do {
+            let jsonData = try JSONSerialization.data(withJSONObject: message, options: [])
+            try sendData(jsonData)
+        } catch {
+            log.error("Client json serialize failed - \(error)")
+        }
+    }
+
+    func sendData(_ jsonData: Data) throws {
+        guard let jsonString = String(data: jsonData, encoding: .utf8) else {
+            throw UDSClientError.stringConversionFailed
+        }
+
+        guard let data = (jsonString + "\n").data(using: .utf8) else {
+            throw UDSClientError.dataConversionFailed
+        }
+
+        connection!.send(content: data, completion: .contentProcessed { error in
+            if let error = error {
+                log.error("Connection send message err: - \(error)")
+            }
+        })
     }
 }

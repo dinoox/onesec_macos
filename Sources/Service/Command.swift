@@ -9,7 +9,7 @@ import ArgumentParser
 
 struct CommandParser: ParsableCommand {
     @Option(name: .shortAndLong, help: "")
-    var udsChannel: String = "/tmp/com.ripplestars.miaoyan.uds"
+    var udsChannel: String = "/tmp/com.ripplestars.miaoyan.uds.test"
 
     @Option(name: .shortAndLong, help: "服务器主机地址")
     var server = "staging-api.miaoyan.cn" // 114.55.98.75:8000 staging-api.miaoyan.cn

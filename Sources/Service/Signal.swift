@@ -14,16 +14,16 @@ final class SignalHandler {
     
     func setupSignalHandlers() {
         signal(SIGINT) { _ in
-            log.info("收到 SIGINT 信号 (Ctrl+C)")
+            log.info("Receive SIGINT (Ctrl+C)")
             SignalHandler.shared.gracefulShutdown()
         }
         
         signal(SIGTERM) { _ in
-            log.info("收到 SIGTERM 信号 (系统终止)")
+            log.info("Receive SIGTERM")
             SignalHandler.shared.gracefulShutdown()
         }
         
-        log.info("信号处理器设置完成")
+        log.info("Signal handler setted")
     }
     
     func gracefulShutdown() {
@@ -33,10 +33,8 @@ final class SignalHandler {
         guard !isShuttingDown else { return }
         isShuttingDown = true
         
-        log.info("开始优雅关闭...")
-        
         DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
-            log.info("优雅关闭完成")
+            log.info("Graceful Shutdown")
             exit(0)
         }
     }

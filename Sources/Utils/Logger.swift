@@ -13,7 +13,7 @@ enum Logger {
         let log = SwiftyBeaver.self
         let console = ConsoleDestination()
 
-        console.format = "$DHH:mm:ss$d $C$L$c $M" // $C 和 $c 是颜色代码
+        console.format =  "$DHH:mm:ss$d $C$L$c [$N] $M" // $C 和 $c 是颜色代码
         console.useTerminalColors = true
 
         log.addDestination(console)
