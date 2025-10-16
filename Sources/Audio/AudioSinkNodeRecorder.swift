@@ -151,7 +151,7 @@ class AudioSinkNodeRecorder {
         // 计算音量并发送到UDS
         if recordState == .recording {
             let volume = calculateVolume(from: outputBuffer)
-            EventBus.shared.publish(.volumeChange(volume: volume))
+            EventBus.shared.publish(.volumeChanged(volume: volume))
         }
         
         // 转换为数据并发送
@@ -186,7 +186,7 @@ class AudioSinkNodeRecorder {
         totalPacketsSent += 1
         totalBytesSent += audioData.count
         
-        EventBus.shared.publish(.onAudioData(data: audioData))
+        EventBus.shared.publish(.audioDataReceived(data: audioData))
     }
     
     // MARK: -
@@ -218,7 +218,7 @@ class AudioSinkNodeRecorder {
 //        ConnectionCenter.shared.ensureWebSocketConnection()
         
         recordState = .recording
-        EventBus.shared.publish(.startRecording(
+        EventBus.shared.publish(.recordingStarted(
             appInfo: appInfo,
             focusContext: focusContext,
             focusElementInfo: focusElementInfo,
@@ -251,7 +251,7 @@ class AudioSinkNodeRecorder {
             sendAudioData(audioData)
         }
         pendingAudioBuffers.removeAll()
-        EventBus.shared.publish(.stopRecording)
+        EventBus.shared.publish(.recordingStopped)
         
         // 计算录音统计信息
         if let startTime = recordingStartTime {

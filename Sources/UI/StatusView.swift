@@ -132,19 +132,19 @@ struct StatusView: View {
         }
         .onReceive(EventBus.shared.events) { event in
             switch event {
-            case .volumeChange(let volume):
+            case .volumeChanged(let volume):
                 // 确保音量值在 0-1 范围内，防止内圈超过最大比例
                 self.volume = min(1.0, max(0.0, CGFloat(volume)))
-            case .startRecording(_, _, _, let recordMode):
+            case .recordingStarted(_, _, _, let recordMode):
                 mode = recordMode
                 recordState = .recording
-            case .stopRecording:
+            case .recordingStopped:
                 recordState = .processing
-            case .serverResult:
+            case .serverResultReceived:
                 recordState = .idle
-            case .modeUpgrade(_, let toMode, _):
+            case .modeUpgraded(_, let toMode, _):
                 mode = toMode
-            case .notification(let title, let content):
+            case .notificationReceived(let title, let content):
                 showNotification = true
                 log.info("title \(title)\n \(content)")
             default:

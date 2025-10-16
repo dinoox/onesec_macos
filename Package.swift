@@ -12,7 +12,7 @@ let package = Package(
         // Products define the executables and libraries a package produces, making them visible to other packages.
         .executable(
             name: "OnesecCore",
-            targets: ["OnesecCore"]
+            targets: ["OnesecCore"],
         ),
     ],
     dependencies: [
@@ -31,11 +31,14 @@ let package = Package(
                 .product(name: "SwiftyBeaver", package: "SwiftyBeaver"),
                 .product(name: "ArgumentParser", package: "swift-argument-parser"),
             ],
-            path: "Sources"
+            path: "Sources",
+            resources: [
+                .process("Resources"),
+            ],
         ),
         .testTarget(
             name: "OnesecCoreTests",
-            dependencies: ["OnesecCore"]
+            dependencies: ["OnesecCore"],
         ),
-    ]
+    ],
 )

@@ -22,30 +22,30 @@ enum UDSClientError: Error {
     case dataConversionFailed
 }
 
-protocol UDSReceiveDelegate: AnyObject {
-    /// UDS 连接成功
-    func didConnectToUDS()
-
-    /// 收到快捷键设置消息
-    /// - Parameters:
-    ///   - mode: 识别模式 (normal/command)
-    ///   - timestamp: 时间戳
-    func didReceiveHotkeySetting(mode: String, timestamp: Int64)
-
-    /// 收到快捷键设置结束消息
-    /// - Parameters:
-    ///   - mode: 识别模式 (normal/command)
-    ///   - hotkeyCombination: 快捷键组合字符串列表
-    ///   - timestamp: 时间戳
-    func didReceiveHotkeySettingEnd(mode: String, hotkeyCombination: [String], timestamp: Int64)
-
-    /// 收到初始化配置消息
-    /// - Parameters:
-    ///   - authToken: 认证 token
-    ///   - hotkeyConfigs: 快捷键配置列表，每个配置包含 mode 与 hotkey_combination
-    ///   - timestamp: 时间戳
-    func didReceiveInitConfig(authToken: String?, hotkeyConfigs: [[String: Any]]?, timestamp: Int64)
-}
+// protocol UDSReceiveDelegate: AnyObject {
+//    /// UDS 连接成功
+//    func didConnectToUDS()
+//
+//    /// 收到快捷键设置消息
+//    /// - Parameters:
+//    ///   - mode: 识别模式 (normal/command)
+//    ///   - timestamp: 时间戳
+//    func didReceiveHotkeySetting(mode: String, timestamp: Int64)
+//
+//    /// 收到快捷键设置结束消息
+//    /// - Parameters:
+//    ///   - mode: 识别模式 (normal/command)
+//    ///   - hotkeyCombination: 快捷键组合字符串列表
+//    ///   - timestamp: 时间戳
+//    func didReceiveHotkeySettingEnd(mode: String, hotkeyCombination: [String], timestamp: Int64)
+//
+//    /// 收到初始化配置消息
+//    /// - Parameters:
+//    ///   - authToken: 认证 token
+//    ///   - hotkeyConfigs: 快捷键配置列表，每个配置包含 mode 与 hotkey_combination
+//    ///   - timestamp: 时间戳
+//    func didReceiveInitConfig(authToken: String?, hotkeyConfigs: [[String: Any]]?, timestamp: Int64)
+// }
 
 // MARK: - UDS 客户端: Unix Domain Socket 客户端类, 用于与 Node 进程通信
 
@@ -59,29 +59,25 @@ final class UDSClient: @unchecked Sendable {
     /// 连接超时时间（秒）
     private let connectionTimeoutInterval: TimeInterval = 5.0
 
-    /// 接收消息代理
-    weak var receiveDelegate: UDSReceiveDelegate?
-
-    /// EventBus 订阅取消令牌
     private var cancellables = Set<AnyCancellable>()
 
     init() {
         EventBus.shared.events
             .sink { [weak self] event in
-                guard let self = self else { return }
+                guard let self else { return }
 
                 switch event {
-                case .startRecording(_, _, _, let recordMode):
-                    self.sendStartRecording(recordMode: recordMode)
+                case .recordingStarted(_, _, _, let recordMode):
+                    sendStartRecording(recordMode: recordMode)
 
-                case .stopRecording:
-                    self.sendStopRecording()
+                case .recordingStopped:
+                    sendStopRecording()
 
-                case .modeUpgrade(let fromMode, let toMode, let focusContext):
-                    self.sendModeUpgrade(fromMode: fromMode, toMode: toMode, focusContext: focusContext)
+                case .modeUpgraded(let fromMode, let toMode, let focusContext):
+                    sendModeUpgrade(fromMode: fromMode, toMode: toMode, focusContext: focusContext)
 
                 case .authTokenFailed(let reason, let statusCode):
-                    self.sendAuthTokenFailed(reason: reason, statusCode: statusCode)
+                    sendAuthTokenFailed(reason: reason, statusCode: statusCode)
 
                 default:
                     break
@@ -109,7 +105,7 @@ final class UDSClient: @unchecked Sendable {
         connection = NWConnection(to: NWEndpoint.unix(path: udsChannel), using: parameters)
 
         connection!.stateUpdateHandler = { [weak self] state in
-            guard let self = self else { return }
+            guard let self else { return }
 
             switch state {
             case .ready:
@@ -127,22 +123,22 @@ final class UDSClient: @unchecked Sendable {
     }
 
     private func startMessagePolling() {
-        guard let connection = connection else { return }
+        guard let connection else { return }
 
         connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { [weak self] data, _, isComplete, err in
-            guard let self = self else { return }
+            guard let self else { return }
             guard err == nil else {
                 log.error("reveive message err: - \(err!)")
                 return
             }
 
-            if let data = data, !data.isEmpty {
-                self.messsageBuffer.append(data)
-                self.processReceivedData()
+            if let data, !data.isEmpty {
+                messsageBuffer.append(data)
+                processReceivedData()
             }
 
             if !isComplete {
-                self.startMessagePolling()
+                startMessagePolling()
             }
         }
     }
@@ -200,9 +196,9 @@ final class UDSClient: @unchecked Sendable {
             return
         }
 
-        Task { [weak self] in
-            self?.receiveDelegate?.didReceiveHotkeySetting(mode: mode, timestamp: timestamp)
-        }
+//        Task { [weak self] in
+//            self?.receiveDelegate?.didReceiveHotkeySetting(mode: mode, timestamp: timestamp)
+//        }
     }
 
     /// 处理快捷键设置结束消息
@@ -215,9 +211,9 @@ final class UDSClient: @unchecked Sendable {
             return
         }
 
-        Task { [weak self] in
-            self?.receiveDelegate?.didReceiveHotkeySettingEnd(mode: mode, hotkeyCombination: hotkeyCombination, timestamp: timestamp)
-        }
+//        Task { [weak self] in
+//            self?.receiveDelegate?.didReceiveHotkeySettingEnd(mode: mode, hotkeyCombination: hotkeyCombination, timestamp: timestamp)
+//        }
     }
 
     private func handleInitConfigMessage(json: [String: Any], timestamp: Int64) {
@@ -233,7 +229,7 @@ final class UDSClient: @unchecked Sendable {
             log.info("Init Auth Token")
         }
 
-        if let hotkeyConfigs = hotkeyConfigs {
+        if let hotkeyConfigs {
             for config in hotkeyConfigs {
                 if let mode = config["mode"] as? String,
                    let hotkeyCombination = config["hotkey_combination"] as? [String]
@@ -244,11 +240,11 @@ final class UDSClient: @unchecked Sendable {
         }
 
         // TODO: hotkeyConfigs data race
-        receiveDelegate?.didReceiveInitConfig(
-            authToken: authToken,
-            hotkeyConfigs: hotkeyConfigs,
-            timestamp: timestamp
-        )
+//        receiveDelegate?.didReceiveInitConfig(
+//            authToken: authToken,
+//            hotkeyConfigs: hotkeyConfigs,
+//            timestamp: timestamp
+//        )
     }
 }
 
@@ -288,7 +284,7 @@ extension UDSClient {
             "reason": reason
         ]
 
-        if let statusCode = statusCode {
+        if let statusCode {
             data["status_code"] = statusCode
         }
 
@@ -315,7 +311,7 @@ extension UDSClient {
         }
 
         connection!.send(content: data, completion: .contentProcessed { error in
-            if let error = error {
+            if let error {
                 log.error("Connection send message err: - \(error)")
             }
         })

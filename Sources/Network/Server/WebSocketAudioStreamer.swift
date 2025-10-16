@@ -13,11 +13,9 @@ import Starscream
 class WebSocketAudioStreamer {
     private var ws: WebSocket?
 
-    /// 连接状态
-    var connectionState: ConnState = .disconnected
-
-    /// EventBus 订阅取消令牌
     private var cancellables = Set<AnyCancellable>()
+
+    var connectionState: ConnState = .disconnected
 
     init() {
         EventBus.shared.events
@@ -25,7 +23,7 @@ class WebSocketAudioStreamer {
                 guard let self else { return }
 
                 switch event {
-                case .startRecording(let appInfo, let focusContext, let focusElementInfo, let recordMode):
+                case .recordingStarted(let appInfo, let focusContext, let focusElementInfo, let recordMode):
                     sendStartRecording(
                         appInfo: appInfo,
                         focusContext: focusContext,
@@ -33,13 +31,13 @@ class WebSocketAudioStreamer {
                         recordMode: recordMode
                     )
 
-                case .stopRecording:
+                case .recordingStopped:
                     sendStopRecording()
 
-                case .modeUpgrade(let fromMode, let toMode, let focusContext):
+                case .modeUpgraded(let fromMode, let toMode, let focusContext):
                     sendModeUpgrade(fromMode: fromMode, toMode: toMode, focusContext: focusContext)
 
-                case .onAudioData(let data): sendAudioData(data)
+                case .audioDataReceived(let data): sendAudioData(data)
 
                 default:
                     break
@@ -90,8 +88,7 @@ class WebSocketAudioStreamer {
         guard connectionState == .connected, let ws else {
             return
         }
-
-//        log.info("send audio data \(audioData.count)")
+        
         ws.write(data: audioData)
     }
 
@@ -163,6 +160,6 @@ class WebSocketAudioStreamer {
         }
 
         let serverTime = data["server_time"] as? Int
-        EventBus.shared.publish(.serverResult(summary: summary, serverTime: serverTime))
+        EventBus.shared.publish(.serverResultReceived(summary: summary, serverTime: serverTime))
     }
 }

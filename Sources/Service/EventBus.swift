@@ -9,14 +9,14 @@ import Combine
 import Foundation
 
 enum AppEvent {
-    case volumeChange(volume: Float)
-    case onAudioData(data: Data)
-    case startRecording(appInfo: AppInfo?, focusContext: FocusContext?, focusElementInfo: FocusElementInfo?, recordMode: RecordMode)
-    case stopRecording
-    case serverResult(summary: String, serverTime: Int?)
-    case modeUpgrade(fromMode: RecordMode, toMode: RecordMode, focusContext: FocusContext?)
+    case volumeChanged(volume: Float)
+    case recordingStarted(appInfo: AppInfo?, focusContext: FocusContext?, focusElementInfo: FocusElementInfo?, recordMode: RecordMode)
+    case recordingStopped
+    case audioDataReceived(data: Data)
+    case serverResultReceived(summary: String, serverTime: Int?)
+    case modeUpgraded(fromMode: RecordMode, toMode: RecordMode, focusContext: FocusContext?)
     case authTokenFailed(reason: String, statusCode: Int?)
-    case notification(title: String, content: String)
+    case notificationReceived(title: String, content: String)
 }
 
 class EventBus: @unchecked Sendable {
@@ -28,7 +28,7 @@ class EventBus: @unchecked Sendable {
         eventSubject.send(event)
     }
 
-    // 订阅所有事件
+    // 订阅所有
     var events: AnyPublisher<AppEvent, Never> {
         eventSubject.eraseToAnyPublisher()
     }
@@ -49,17 +49,8 @@ extension EventBus {
     var volumeChange: AnyPublisher<Float, Never> {
         eventSubject
             .compactMap { event in
-                guard case .volumeChange(let volume) = event else { return nil }
+                guard case .volumeChanged(let volume) = event else { return nil }
                 return volume
-            }
-            .eraseToAnyPublisher()
-    }
-
-    var serverResult: AnyPublisher<String, Never> {
-        eventSubject
-            .compactMap { event in
-                guard case .serverResult(let summary, let serverTime) = event else { return nil }
-                return summary
             }
             .eraseToAnyPublisher()
     }

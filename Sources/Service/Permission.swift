@@ -30,9 +30,9 @@ final class PermissionManager {
     func checkStatus(_ type: PermissionType) -> PermissionStatus {
         switch type {
         case .accessibility:
-            return AXIsProcessTrusted() ? .granted : .denied
+            AXIsProcessTrusted() ? .granted : .denied
         case .microphone:
-            return microphoneStatus()
+            microphoneStatus()
         }
     }
     
@@ -129,12 +129,11 @@ final class PermissionManager {
     }
 
     private func openSystemPreferences(for type: PermissionType) {
-        let urlString: String
-        switch type {
+        let urlString = switch type {
         case .accessibility:
-            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         case .microphone:
-            urlString = "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
         }
         
         if let url = URL(string: urlString) {
