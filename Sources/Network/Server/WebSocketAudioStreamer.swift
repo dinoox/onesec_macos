@@ -6,6 +6,7 @@
 //
 
 import AppKit
+import Combine
 import Foundation
 import Starscream
 
@@ -15,11 +16,40 @@ class WebSocketAudioStreamer {
     /// 连接状态
     var connectionState: ConnState = .disconnected
 
-    /// 识别结果代理
-    weak var messageDelegate: WebSocketMessageDelegate?
+    /// EventBus 订阅取消令牌
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        EventBus.shared.events
+            .sink { [weak self] event in
+                guard let self else { return }
+
+                switch event {
+                case .startRecording(let appInfo, let focusContext, let focusElementInfo, let recordMode):
+                    sendStartRecording(
+                        appInfo: appInfo,
+                        focusContext: focusContext,
+                        focusElementInfo: focusElementInfo,
+                        recordMode: recordMode
+                    )
+
+                case .stopRecording:
+                    sendStopRecording()
+
+                case .modeUpgrade(let fromMode, let toMode, let focusContext):
+                    sendModeUpgrade(fromMode: fromMode, toMode: toMode, focusContext: focusContext)
+
+                case .onAudioData(let data): sendAudioData(data)
+
+                default:
+                    break
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     private func createServerURL() -> URL? {
-        guard let url = URL(string: Config.SERVER) else {
+        guard let url = URL(string: "wss://\(Config.SERVER)") else {
             log.error("Create webSocket server URL failed")
             return nil
         }
@@ -44,7 +74,7 @@ class WebSocketAudioStreamer {
         ws?.delegate = self
         ws?.connect()
 
-        log.info("WebSocket start connect")
+        log.info("WebSocket start connect with token \(Config.AUTH_TOKEN) \(serverURL)")
     }
 
     func disconnect() {
@@ -57,15 +87,16 @@ class WebSocketAudioStreamer {
 
     // TODO: 发到队列
     func sendAudioData(_ audioData: Data) {
-        guard connectionState == .connected, let ws = ws else {
+        guard connectionState == .connected, let ws else {
             return
         }
 
+//        log.info("send audio data \(audioData.count)")
         ws.write(data: audioData)
     }
 
     func sendMessage(_ text: String) {
-        guard connectionState == .connected, let ws = ws else {
+        guard connectionState == .connected, let ws else {
             return
         }
 
@@ -76,40 +107,40 @@ class WebSocketAudioStreamer {
         appInfo: AppInfo? = nil,
         focusContext: FocusContext? = nil,
         focusElementInfo: FocusElementInfo? = nil,
-        recognitionMode: String = "normal"
+        recordMode: RecordMode = .normal
     ) {
-        var data: [String: Any] = ["recognition_mode": recognitionMode]
+        var data: [String: Any] = ["recognition_mode": recordMode.rawValue]
 
-        if let appInfo = appInfo {
+        if let appInfo {
             data["app_info"] = appInfo.toJSON()
         }
 
-        if let focusContext = focusContext {
+        if let focusContext {
             data["focus_context"] = focusContext.toJSON()
         }
 
-        if let focusElementInfo = focusElementInfo {
+        if let focusElementInfo {
             data["focus_element_info"] = focusElementInfo.toJSON()
         }
 
-        sendWebSocketMessage(type: .startRecording)
+        sendWebSocketMessage(type: .startRecording, data: data)
     }
 
     func sendStopRecording() {
         sendWebSocketMessage(type: .stopRecording)
     }
 
-    func sendModeUpgrade(fromMode: String, toMode: String, focusContext: FocusContext? = nil) {
+    func sendModeUpgrade(fromMode: RecordMode, toMode: RecordMode, focusContext: FocusContext? = nil) {
         var data: [String: Any] = [
-            "from_mode": fromMode,
-            "to_mode": toMode
+            "from_mode": fromMode.rawValue,
+            "to_mode": toMode.rawValue
         ]
 
-        if let focusContext = focusContext {
+        if let focusContext {
             data["focus_context"] = focusContext.toJSON()
         }
 
-        sendWebSocketMessage(type: .modeUpgrade)
+        sendWebSocketMessage(type: .modeUpgrade, data: data)
     }
 
     private func sendWebSocketMessage(type: MessageType, data: [String: Any]? = nil) {
@@ -118,15 +149,20 @@ class WebSocketAudioStreamer {
             return
         }
 
-        log.debug("Send \(type): \(jsonStr)")
+        log.debug("Send to server \(type): \(jsonStr)")
+        sendMessage(jsonStr)
     }
 
     func didReceiveMessage(_ json: [String: Any]) {
-        guard let summary = json["summary"] as? String else {
+        guard let data = json["data"] as? [String: Any] else {
             return
         }
 
-        let serverTime = json["server_time"] as? Int
-        messageDelegate?.didReceiveMessage(summary, serverTime: serverTime)
+        guard let summary = data["summary"] as? String else {
+            return
+        }
+
+        let serverTime = data["server_time"] as? Int
+        EventBus.shared.publish(.serverResult(summary: summary, serverTime: serverTime))
     }
 }

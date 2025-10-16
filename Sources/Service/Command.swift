@@ -12,11 +12,11 @@ struct CommandParser: ParsableCommand {
     var udsChannel: String = "/tmp/com.ripplestars.miaoyan.uds.test"
 
     @Option(name: .shortAndLong, help: "服务器主机地址")
-    var server = "staging-api.miaoyan.cn" // 114.55.98.75:8000 staging-api.miaoyan.cn
+    var server = "114.55.98.75:8000" // 114.55.98.75:8000 staging-api.miaoyan.cn
 
     @Option(name: .shortAndLong, help: "设置鉴权 Token")
     var authToken: String
-    
+
     @Option(name: .shortAndLong, help: "设置 Debug 模式")
     var debugMode: Bool = true
 

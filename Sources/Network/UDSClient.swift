@@ -5,6 +5,7 @@
 //  Created by 王晓雨 on 2025/10/14.
 //
 
+import Combine
 import Foundation
 import Network
 
@@ -61,7 +62,33 @@ final class UDSClient: @unchecked Sendable {
     /// 接收消息代理
     weak var receiveDelegate: UDSReceiveDelegate?
 
-    init() {}
+    /// EventBus 订阅取消令牌
+    private var cancellables = Set<AnyCancellable>()
+
+    init() {
+        EventBus.shared.events
+            .sink { [weak self] event in
+                guard let self = self else { return }
+
+                switch event {
+                case .startRecording(_, _, _, let recordMode):
+                    self.sendStartRecording(recordMode: recordMode)
+
+                case .stopRecording:
+                    self.sendStopRecording()
+
+                case .modeUpgrade(let fromMode, let toMode, let focusContext):
+                    self.sendModeUpgrade(fromMode: fromMode, toMode: toMode, focusContext: focusContext)
+
+                case .authTokenFailed(let reason, let statusCode):
+                    self.sendAuthTokenFailed(reason: reason, statusCode: statusCode)
+
+                default:
+                    break
+                }
+            }
+            .store(in: &cancellables)
+    }
 
     func connect() {
         let udsChannel = Config.UDS_CHANNEL
@@ -226,24 +253,24 @@ final class UDSClient: @unchecked Sendable {
 }
 
 extension UDSClient {
-    func sendStartRecording(recognitionMode: String) {
+    func sendStartRecording(recordMode: RecordMode) {
         let data: [String: Any] = [
-            "recognition_mode": recognitionMode
+            "recognition_mode": recordMode.rawValue
         ]
 
-        sendJSONMessage(WebSocketMessage.create(type: .startRecording, data: data).toJSON())
-        log.debug("Send start recording: \(recognitionMode)")
+//        sendJSONMessage(WebSocketMessage.create(type: .startRecording, data: data).toJSON())
+        log.debug("Send start recording: \(recordMode.rawValue)")
     }
 
     func sendStopRecording() {
-        sendJSONMessage(WebSocketMessage.create(type: .stopRecording).toJSON())
+//        sendJSONMessage(WebSocketMessage.create(type: .stopRecording).toJSON())
         log.debug("Send stop recording")
     }
 
-    func sendModeUpgrade(fromMode: String, toMode: String, focusContext: FocusContext? = nil) {
+    func sendModeUpgrade(fromMode: RecordMode, toMode: RecordMode, focusContext: FocusContext? = nil) {
         let data: [String: Any] = [
-            "from_mode": fromMode,
-            "to_mode": toMode
+            "from_mode": fromMode.rawValue,
+            "to_mode": toMode.rawValue
         ]
 
         // UDS 消息中不包含焦点上下文信息

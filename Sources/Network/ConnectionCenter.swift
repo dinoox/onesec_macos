@@ -14,31 +14,12 @@ actor ConnectionCenter {
     private var udsClient: UDSClient?
 
     private init() {
+        // 初始化 UDS 客户端并连接
         udsClient = UDSClient()
         udsClient!.connect()
 
-        // 使用示例
-
-//        wssClient = WebSocketAudioStreamer()
-//        wssClient!.connect()
-    }
-
-    func sendStartRecording(appInfo: AppInfo? = nil, focusContext: FocusContext? = nil, focusElementInfo: FocusElementInfo? = nil, recognitionMode: String = "normal") {
-        wssClient?.sendStartRecording(appInfo: appInfo, focusContext: focusContext, focusElementInfo: focusElementInfo, recognitionMode: recognitionMode)
-        udsClient?.sendStartRecording(recognitionMode: recognitionMode)
-    }
-
-    func sendStopRecording() {
-        wssClient?.sendStopRecording()
-        udsClient?.sendStopRecording()
-    }
-
-    func sendModeUpgrade(fromMode: String, toMode: String, focusContext: FocusContext? = nil) {
-        wssClient?.sendModeUpgrade(fromMode: fromMode, toMode: toMode, focusContext: focusContext)
-        udsClient?.sendModeUpgrade(fromMode: fromMode, toMode: toMode, focusContext: focusContext)
-    }
-
-    func sendAuthTokenFailed(reason: String, statusCode: Int? = nil) {
-        udsClient?.sendAuthTokenFailed(reason: reason, statusCode: statusCode)
+        // 初始化 WebSocket 客户端（订阅 EventBus）
+        wssClient = WebSocketAudioStreamer()
+        wssClient!.connect()
     }
 }

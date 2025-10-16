@@ -9,7 +9,7 @@ import Carbon
 import Cocoa
 import Foundation
 
-enum RecognitionMode: String, CaseIterable {
+enum RecordMode: String, CaseIterable {
     case normal
     case command
 
@@ -34,9 +34,9 @@ enum KeyEventResult {
 struct KeyConfig {
     let keyCodes: [Int64] // 按键组合的键码数组
     let description: String // 配置描述
-    let mode: RecognitionMode // 识别模式
+    let mode: RecordMode // 识别模式
 
-    init(keyCodes: [Int64], description: String, mode: RecognitionMode) {
+    init(keyCodes: [Int64], description: String, mode: RecordMode) {
         self.keyCodes = keyCodes.sorted()
         self.description = description
         self.mode = mode
@@ -134,6 +134,39 @@ class KeyEventProcessor {
     }
 
     func handlekeyEvent(type: CGEventType, event: CGEvent) -> KeyEventResult {
+        // 先更新按键状态
+        keyStateTracker.handleKeyEvent(type: type, event: event)
+
+        // 获取当前按下的所有键并实时检测
+        if let pressedKeys = keyStateTracker.getCurrentPressedKeys() {
+            // 检查是否命中配置的按键组合
+            if let matchedConfig = dualModeConfig.getConfig(for: pressedKeys) {
+                let keyDescriptions = pressedKeys
+                    .compactMap { KeyMapper.keyCodeMap[$0] }
+                    .joined(separator: "+")
+                log.info("🎯 按键命中配置: \(matchedConfig.description)")
+                log.info("   按键组合: \(keyDescriptions)")
+                log.info("   键码: \(pressedKeys)")
+
+                return .startRecording
+            } else {
+                // 检查是否部分匹配normalModeConfig的keyCodes
+                let normalKeyCodes = Set(dualModeConfig.normalModeConfig.keyCodes)
+                let commandKeyCodes = Set(dualModeConfig.commandModeConfig.keyCodes)
+                let currentKeys = Set(pressedKeys)
+
+                if !currentKeys.intersection(normalKeyCodes).isEmpty {
+//                    log.debug("⚠️ 部分匹配普通模式按键: \(pressedKeys)")
+                }
+                if !currentKeys.intersection(commandKeyCodes).isEmpty {
+//                    log.debug("⚠️ 部分匹配命令模式按键: \(pressedKeys)")
+                }
+                log.info("PressedKeys \(pressedKeys)")
+
+                return .stopRecording
+            }
+        }
+
         return .noAction
     }
 }

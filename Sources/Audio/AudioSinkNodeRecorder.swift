@@ -11,10 +11,11 @@ import Foundation
 enum RecordState {
     case idle
     case recording
+    case processing
     case stopping
 }
 
-class AudioSinkNodeRecorder: WebSocketMessageDelegate {
+class AudioSinkNodeRecorder {
     private var audioEngine = AVAudioEngine()
     private var sinkNode: AVAudioSinkNode!
     private var converter: AVAudioConverter!
@@ -50,9 +51,6 @@ class AudioSinkNodeRecorder: WebSocketMessageDelegate {
     
     init() {
         setupSinkNodeAudioEngine()
-        
-        // 设置识别结果代理
-        // CommunicationManager.shared.setRecognitionDelegate(self)
     }
     
     private func setupSinkNodeAudioEngine() {
@@ -73,8 +71,8 @@ class AudioSinkNodeRecorder: WebSocketMessageDelegate {
         
         // SinkNode Handle
         sinkNode = AVAudioSinkNode { [weak self] timestamp, frameCount, audioBufferList in
-            guard let self = self, self.recordState != .recording else { return OSStatus(noErr) }
-            self.processSinkNodeBuffer(audioBufferList, frameCount: frameCount, timestamp: timestamp)
+            guard let self, recordState == .recording else { return OSStatus(noErr) }
+            processSinkNodeBuffer(audioBufferList, frameCount: frameCount, timestamp: timestamp)
             return OSStatus(noErr)
         }
         
@@ -139,7 +137,7 @@ class AudioSinkNodeRecorder: WebSocketMessageDelegate {
             outStatus.pointee = .haveData
             return inputBuffer
         }
-        
+
         if status == .error {
             log.error("音频格式转换失败: \(error?.localizedDescription ?? "未知错误")")
             return
@@ -150,21 +148,10 @@ class AudioSinkNodeRecorder: WebSocketMessageDelegate {
             outputBuffer.frameLength = expectedOutputFrames
         }
         
-        // 写入音频文件
-        if Config.DEBUG_MODE {
-            if let audioFile = audioFile {
-                do {
-                    try audioFile.write(from: outputBuffer)
-                } catch {
-                    log.error("写入音频文件失败: \(error.localizedDescription)")
-                }
-            }
-        }
-        
         // 计算音量并发送到UDS
         if recordState == .recording {
             let volume = calculateVolume(from: outputBuffer)
-//            ConnectionCenter.shared.sendVolumeData(volume: volume, peak: volume > 0.8, low: volume < 0.1)
+            EventBus.shared.publish(.volumeChange(volume: volume))
         }
         
         // 转换为数据并发送
@@ -199,12 +186,12 @@ class AudioSinkNodeRecorder: WebSocketMessageDelegate {
         totalPacketsSent += 1
         totalBytesSent += audioData.count
         
-        // ConnectionCenter.shared.sendAudioData(audioData)
+        EventBus.shared.publish(.onAudioData(data: audioData))
     }
     
     // MARK: -
 
-    func startRecording(appInfo: AppInfo? = nil, focusContext: FocusContext? = nil, focusElementInfo: FocusElementInfo? = nil, recognitionMode: String = "normal") {
+    func startRecording(appInfo: AppInfo? = nil, focusContext: FocusContext? = nil, focusElementInfo: FocusElementInfo? = nil, recordMode: RecordMode = .normal) {
         guard recordState != .recording else {
             log.warning("录音已在进行中")
             return
@@ -230,15 +217,16 @@ class AudioSinkNodeRecorder: WebSocketMessageDelegate {
         // 确保WebSocket连接
 //        ConnectionCenter.shared.ensureWebSocketConnection()
         
+        recordState = .recording
+        EventBus.shared.publish(.startRecording(
+            appInfo: appInfo,
+            focusContext: focusContext,
+            focusElementInfo: focusElementInfo,
+            recordMode: recordMode
+        ))
+        
         do {
             try audioEngine.start()
-            recordState = .recording
-            
-            // 发送开始录音指令
-            Task {
-                await ConnectionCenter.shared.sendStartRecording(appInfo: appInfo, focusContext: focusContext, focusElementInfo: focusElementInfo, recognitionMode: recognitionMode)
-            }
-            
             log.info("✅ SinkNode录音启动成功")
         } catch {
             log.error("SinkNode录音启动失败: \(error.localizedDescription)")
@@ -263,11 +251,7 @@ class AudioSinkNodeRecorder: WebSocketMessageDelegate {
             sendAudioData(audioData)
         }
         pendingAudioBuffers.removeAll()
-        
-        // 发送停止指令
-        Task {
-            await ConnectionCenter.shared.sendStopRecording()
-        }
+        EventBus.shared.publish(.stopRecording)
         
         // 计算录音统计信息
         if let startTime = recordingStartTime {
@@ -303,12 +287,12 @@ class AudioSinkNodeRecorder: WebSocketMessageDelegate {
     
     /// 获取当前识别结果
     func getCurrentRecognitionText() -> String {
-        return currentRecognitionText
+        currentRecognitionText
     }
     
     /// 获取所有识别结果
     func getAllRecognitionResults() -> [String] {
-        return recognitionResults
+        recognitionResults
     }
     
     // MARK: - 私有辅助方法
@@ -387,39 +371,27 @@ class AudioSinkNodeRecorder: WebSocketMessageDelegate {
     
     // MARK: - WebSocketRecognitionDelegate
     
-    func didReceiveMessage(_ summary: String, serverTime: Int?) {
-        log.info("收到识别汇总: \(summary)")
-        
-        // 记录服务端耗时
-        if let serverTime = serverTime {
-            log.info("服务端耗时: \(serverTime)ms")
-        }
-        
-        // 将汇总结果也添加到识别结果中
-        if !summary.isEmpty, summary != "未获取到识别结果" {
-            recognitionResults.append(summary)
-            currentRecognitionText = summary
-            log.info("识别汇总已添加到结果列表")
-            
-            performTextInputWithResult(summary, serverTime: serverTime)
+//    func didReceiveMessage(_ summary: String, serverTime: Int?) {
+//        log.info("收到识别汇总: \(summary)")
+//
+//        // 记录服务端耗时
+//        if let serverTime {
+//            log.info("服务端耗时: \(serverTime)ms")
+//        }
+//
+//        // 将汇总结果也添加到识别结果中
+//        if !summary.isEmpty, summary != "未获取到识别结果" {
+//            recognitionResults.append(summary)
+//            currentRecognitionText = summary
+//            log.info("识别汇总已添加到结果列表")
+//
+//            performTextInputWithResult(summary, serverTime: serverTime)
+//
+//        } else {
+//            log.warning("识别汇总为空或无效")
+//            // 即使没有有效结果，也要发送通知到UDS
+//            performTextInputWithResult("未获取到识别结果", serverTime: serverTime)
+//        }
+//    }
 
-        } else {
-            log.warning("识别汇总为空或无效")
-            // 即使没有有效结果，也要发送通知到UDS
-            performTextInputWithResult("未获取到识别结果", serverTime: serverTime)
-        }
-    }
-    
-    private func performTextInputWithResult(_ result: String, serverTime: Int? = nil) {
-        var userInfo: [String: Any] = ["result": result]
-        if let serverTime = serverTime {
-            userInfo["serverTime"] = serverTime
-        }
-        
-        NotificationCenter.default.post(
-            name: NSNotification.Name("RecognitionResultReady"),
-            object: nil,
-            userInfo: userInfo
-        )
-    }
 }

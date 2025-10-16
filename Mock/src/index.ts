@@ -78,19 +78,22 @@ const server = net.createServer((socket) => {
     console.error('❌ Socket 错误:', err);
   });
 
-  sendMessage(socket, createMessage('init_config', {
-    auth_token: 'test_token_123456',
-    hotkey_configs: [
-      {
-        mode: 'normal',
-        hotkey_combination: ['command', 'shift', 'a']
-      },
-      {
-        mode: 'command',
-        hotkey_combination: ['command', 'shift', 'c']
-      }
-    ]
-  }));
+  setTimeout(() => {
+    sendMessage(socket, createMessage('init_config', {
+      auth_token: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI5IiwicGhvbmUiOiIxNzg2NjcwMzYyMiIsIm5pY2tuYW1lIjoiXHU3NTI4XHU2MjM3MzYyMjMzODMiLCJ0aW1lc3RhbXAiOjE3NjA2MDU0NzZ9.GeqhK0AlKjyzl1WotB6zmTosdWiUtpBnjlxz3ljtLVI',
+      hotkey_configs: [
+        {
+          mode: 'normal',
+          hotkey_combination: ['fn']
+        },
+        {
+          mode: 'command',
+          hotkey_combination: ['command', 'shift', 'c']
+        }
+      ]
+    }));
+  },4000)
+
   return
 
   // 命令行交互

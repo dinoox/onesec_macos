@@ -9,10 +9,6 @@ import AppKit
 import Foundation
 import Starscream
 
-protocol WebSocketMessageDelegate: AnyObject {
-    func didReceiveMessage(_ summary: String, serverTime: Int?)
-}
-
 extension WebSocketAudioStreamer: WebSocketDelegate {
     func didReceive(event: WebSocketEvent, client: WebSocketClient) {
         switch event {
@@ -35,7 +31,6 @@ extension WebSocketAudioStreamer: WebSocketDelegate {
                 return
             }
 
-            log.debug("WebSocket JSON parse done: \(json)")
             didReceiveMessage(json)
 
         case .binary(let data):

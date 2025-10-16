@@ -6,12 +6,20 @@
 //
 
 import Combine
+import Foundation
 
 enum AppEvent {
-    case audioVoiceChange(voice: Int)
+    case volumeChange(volume: Float)
+    case onAudioData(data: Data)
+    case startRecording(appInfo: AppInfo?, focusContext: FocusContext?, focusElementInfo: FocusElementInfo?, recordMode: RecordMode)
+    case stopRecording
+    case serverResult(summary: String, serverTime: Int?)
+    case modeUpgrade(fromMode: RecordMode, toMode: RecordMode, focusContext: FocusContext?)
+    case authTokenFailed(reason: String, statusCode: Int?)
+    case notification(title: String, content: String)
 }
 
-actor EventBus {
+class EventBus: @unchecked Sendable {
     static let shared = EventBus()
     let eventSubject = PassthroughSubject<AppEvent, Never>()
 
@@ -38,11 +46,20 @@ actor EventBus {
 }
 
 extension EventBus {
-    var voiceChanges: AnyPublisher<Int, Never> {
+    var volumeChange: AnyPublisher<Float, Never> {
         eventSubject
             .compactMap { event in
-                guard case .audioVoiceChange(let voice) = event else { return nil }
-                return voice
+                guard case .volumeChange(let volume) = event else { return nil }
+                return volume
+            }
+            .eraseToAnyPublisher()
+    }
+
+    var serverResult: AnyPublisher<String, Never> {
+        eventSubject
+            .compactMap { event in
+                guard case .serverResult(let summary, let serverTime) = event else { return nil }
+                return summary
             }
             .eraseToAnyPublisher()
     }

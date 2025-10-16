@@ -27,19 +27,26 @@ class VoiceInputController {
     init() {
         setupKeyEventProcessor()
         registerGlobalTapListener()
+        Task {
+            let circlePanel = await StatusPanelManager.shared.showPanel()
+
+//            DispatchQueue.main.asyncAfter(deadline: .now() + 3.0) {
+//                EventBus.shared.publish(.notification(title: "a", content: "v"))
+//            }
+        }
         log.info("VoiceInputManager init")
     }
 
     private func setupKeyEventProcessor() {
         keyEventProcessor = KeyEventProcessor(
             normalKeyCodes: [63], // Fn - 普通模式
-            commandKeyCodes: [63, 55] // Fn + Command - 命令模式
+            commandKeyCodes: [63, 55], // Fn + Command - 命令模式
         )
         log.info("按键事件处理器已初始化")
     }
 
     func didReceiveInitConfig(authToken: String?, hotkeyConfigs: [[String: Any]]?, timestamp: Int64) {
-        if let hotkeyConfigs = hotkeyConfigs {
+        if let hotkeyConfigs {
             for config in hotkeyConfigs {
                 if let mode = config["mode"] as? String,
                    let hotkeyCombination = config["hotkey_combination"] as? [String]
@@ -62,7 +69,7 @@ class VoiceInputController {
                 let monitor = Unmanaged<VoiceInputController>.fromOpaque(refcon!).takeUnretainedValue()
                 return monitor.handleCGEvent(proxy: proxy, type: type, event: event)
             },
-            userInfo: Unmanaged.passUnretained(self).toOpaque()
+            userInfo: Unmanaged.passUnretained(self).toOpaque(),
         )
 
         // 创建运行循环源
@@ -96,7 +103,7 @@ class VoiceInputController {
             return nil
         }
 
-        guard let keyEventProcessor = keyEventProcessor else {
+        guard let keyEventProcessor else {
             return Unmanaged.passUnretained(event)
         }
 
@@ -114,39 +121,29 @@ class VoiceInputController {
         }
 
         // 使用KeyEventProcessor处理按键事件
-        let processResult = keyEventProcessor.handlekeyEvent(type: type, event: event)
-//
-//        // 根据KeyEventProcessor处理结果执行相应操作
-//        switch processResult {
-//        case .startRecording:
-//            log.info("🎯 🆕 开始录音")
-//            isHotkeyPressed = true
-//            lastHoldTime = Date()
-//            startRecording()
-//
-//        case .stopRecording:
-//            log.info("🎯 ✅ 停止录音")
-//            isHotkeyPressed = false
-//            fnKeyReleaseTime = Date()
-//            stopRecording()
-//            holdTimer?.invalidate()
-//            holdTimer = nil
-//            lastHoldTime = nil
-//
-//        case .modeUpgrade:
-//            log.info("🎯 ⬆️ 模式升级")
-//            handleModeUpgrade()
-//
-//        case .continueRecording:
-//            log.info("🎯 📻 继续录音")
-//            // 无需操作，保持当前状态
-//
-//        case .noAction:
-//            break
-//            // 无需操作
-//        }
+        let keyEvent = keyEventProcessor.handlekeyEvent(type: type, event: event)
+
+        switch keyEvent {
+        case .startRecording: startRecording()
+        case .stopRecording: stopRecording()
+        case .modeUpgrade:
+            log.info("modeUpgrade")
+        case .continueRecording:
+            log.info("continueRecording")
+        case .noAction:
+            break
+        }
 
         // 返回原始事件，让其他应用也能接收到
         return Unmanaged.passUnretained(event)
+    }
+
+    private func startRecording() {
+        let appInfo = ContextService.getAppInfo()
+        audioRecorder.startRecording(appInfo: appInfo, focusContext: nil, focusElementInfo: nil, recordMode: .normal)
+    }
+
+    private func stopRecording() {
+        audioRecorder.stopRecording()
     }
 }
