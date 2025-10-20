@@ -26,7 +26,7 @@ enum UDSClientError: Error {
 
 final class UDSClient: @unchecked Sendable {
     private var connection: NWConnection?
-    private var connectionState: ConnState = .disconnected
+    @Published  var connectionState: ConnState = .disconnected
 
     private let queue = DispatchQueue(label: "uds.client.queue")
     private var messsageBuffer = Data()

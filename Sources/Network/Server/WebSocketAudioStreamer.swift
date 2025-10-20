@@ -15,7 +15,7 @@ class WebSocketAudioStreamer: @unchecked Sendable {
 
     private var cancellables = Set<AnyCancellable>()
 
-    var connectionState: ConnState = .disconnected
+    @Published var connectionState: ConnState = .disconnected
 
     // Reconnect 配置
     var curRetryCount = 0

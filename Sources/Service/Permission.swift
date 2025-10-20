@@ -9,6 +9,7 @@ import AppKit
 @preconcurrency import ApplicationServices
 import AVFoundation
 import Cocoa
+import Combine
 import Foundation
 
 enum PermissionType {
@@ -16,16 +17,28 @@ enum PermissionType {
     case microphone
 }
 
-enum PermissionStatus {
+enum PermissionStatus: Equatable {
     case granted
     case denied
     case notDetermined
 }
 
-@MainActor
-final class PermissionManager {
+final class PermissionManager: ObservableObject, @unchecked Sendable {
     static let shared = PermissionManager()
-    private init() {}
+    
+    @Published var microphonePermissionStatus: PermissionStatus = .notDetermined
+    @Published var accessibilityPermissionStatus: PermissionStatus = .notDetermined
+    @Published var permissionStatusList: [PermissionType: PermissionStatus] = [:]
+    
+    private var cancellables = Set<AnyCancellable>()
+    private var timer: Timer?
+    
+    private init() {
+        checkAllPermissions { [weak self] results in
+            log.info("Permission status: \(results)")
+            self?.startMonitoring()
+        }
+    }
     
     func checkStatus(_ type: PermissionType) -> PermissionStatus {
         switch type {
@@ -36,7 +49,7 @@ final class PermissionManager {
         }
     }
     
-    func request(_ type: PermissionType, completion: @escaping (Bool) -> Void) {
+    func request(_ type: PermissionType, completion: @escaping @Sendable (Bool) -> Void) {
         switch type {
         case .accessibility:
             requestAccessibility(completion: completion)
@@ -45,30 +58,46 @@ final class PermissionManager {
         }
     }
     
-    /// 检查并请求所有权限（辅助功能和麦克风）
-    func checkAllPermissions(completion: @escaping ([PermissionType: Bool]) -> Void) {
+    /// 启动时检查并申请所有权限
+    func checkAllPermissions(completion: @escaping ([PermissionType: PermissionStatus]) -> Void) {
+        // 首先更新所有权限的初始状态
+        updateAllPermissionStatus()
+        
+        var results: [PermissionType: PermissionStatus] = [:]
         let group = DispatchGroup()
-        let types: [PermissionType] = [.accessibility, .microphone]
         
-        var results: [PermissionType: Bool] = [:]
-        
-        for type in types {
-            let status = checkStatus(type)
-            log.info("\(type) 权限状态: \(status)")
-            
-            if status != .granted {
-                group.enter()
-                request(type) { granted in
-                    log.info("\(type) 权限申请结果: \(granted)")
-                    results[type] = granted
-                    group.leave()
-                }
-            } else {
-                results[type] = true
+        // 麦克风
+        group.enter()
+        request(.microphone) { [weak self] granted in
+            guard let self else {
+                group.leave()
+                return
+            }
+            let status = granted ? PermissionStatus.granted : checkStatus(.microphone)
+            DispatchQueue.main.async {
+                self.microphonePermissionStatus = status
+                results[.microphone] = status
+                group.leave()
             }
         }
         
-        group.notify(queue: .main) {
+        // 辅助功能
+        group.enter()
+        request(.accessibility) { [weak self] granted in
+            guard let self else {
+                group.leave()
+                return
+            }
+            let status = granted ? PermissionStatus.granted : checkStatus(.accessibility)
+            DispatchQueue.main.async {
+                self.accessibilityPermissionStatus = status
+                results[.accessibility] = status
+                group.leave()
+            }
+        }
+        
+        group.notify(queue: .main) { [weak self] in
+            self?.permissionStatusList = results
             completion(results)
         }
     }
@@ -93,7 +122,7 @@ final class PermissionManager {
         }
     }
     
-    private func requestMicrophone(completion: @escaping (Bool) -> Void) {
+    private func requestMicrophone(completion: @escaping @Sendable (Bool) -> Void) {
         switch microphoneStatus() {
         case .granted:
             completion(true)
@@ -139,5 +168,49 @@ final class PermissionManager {
         if let url = URL(string: urlString) {
             NSWorkspace.shared.open(url)
         }
+    }
+    
+    // MARK: - 权限状态管理
+    
+    private func startMonitoring() {
+        timer = Timer.scheduledTimer(withTimeInterval: 5.0, repeats: true) { [weak self] _ in
+            self?.updateAllPermissionStatus()
+        }
+        
+        // 监听应用激活事件，当应用重新激活时检查权限
+        NotificationCenter.default.addObserver(
+            forName: NSApplication.didBecomeActiveNotification,
+            object: nil,
+            queue: .main
+        ) { [weak self] _ in
+            self?.updateAllPermissionStatus()
+        }
+    }
+    
+    /// 更新所有权限状态
+    func updateAllPermissionStatus() {
+        DispatchQueue.main.async { [weak self] in
+            guard let self else { return }
+            let newMicStatus = checkStatus(.microphone)
+            let newAccessStatus = checkStatus(.accessibility)
+            
+            if microphonePermissionStatus != newMicStatus {
+                microphonePermissionStatus = newMicStatus
+            }
+            
+            if accessibilityPermissionStatus != newAccessStatus {
+                accessibilityPermissionStatus = newAccessStatus
+            }
+            
+            permissionStatusList = [
+                .microphone: newMicStatus,
+                .accessibility: newAccessStatus
+            ]
+        }
+    }
+    
+    deinit {
+        timer?.invalidate()
+        cancellables.removeAll()
     }
 }
