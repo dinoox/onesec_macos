@@ -5,7 +5,7 @@ CommandParser.main()
 SoundService.shared.initialize()
 SignalHandler.shared.setupSignalHandlers()
 
-_ = ConnectionCenter.shared
-_ = InputController()
+let connectionCenter = ConnectionCenter.shared
+let inputController = InputController()
 
 RunLoop.main.run()

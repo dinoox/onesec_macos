@@ -17,7 +17,7 @@ class ConnectionCenter: @unchecked Sendable {
 
     @Published var wssState: ConnState = .disconnected
     @Published var udsState: ConnState = .disconnected
-    @Published var permissionStatusList: [PermissionType: PermissionStatus] = [:]
+    @Published var permissionsState: [PermissionType: PermissionStatus] = [:]
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -30,19 +30,19 @@ class ConnectionCenter: @unchecked Sendable {
     private func bind() {
         bind(wssClient.$connectionState, to: \.wssState)
         bind(udsClient.$connectionState, to: \.udsState)
-        bind(permissionClient.$permissionStatusList, to: \.permissionStatusList)
+        bind(permissionClient.$permissionsState, to: \.permissionsState)
     }
 
     func canRecord() -> Bool {
-        isWssServerConnected() && hasAllPermissions()
+        isWssServerConnected() && hasPermissions()
     }
 
     func isWssServerConnected() -> Bool {
         wssClient.connectionState == .connected
     }
 
-    func hasAllPermissions() -> Bool {
-        permissionStatusList.values.allSatisfy { $0 == .granted }
+    func hasPermissions() -> Bool {
+        permissionsState.values.allSatisfy { $0 == .granted }
     }
 }
 
@@ -55,7 +55,13 @@ extension ConnectionCenter {
             .receive(on: DispatchQueue.main)
             .sink { [weak self] newValue in
                 self?[keyPath: keyPath] = newValue
-                log.info("State [\(keyPath)] Sync to \(newValue)")
+
+                let stateName = String(describing: keyPath)
+                    .components(separatedBy: ".")
+                    .last!
+                    .replacingOccurrences(of: ">", with: "")
+
+                log.debug("\("[\(stateName)]".green) → \("\(newValue)".green)")
             }
             .store(in: &cancellables)
     }

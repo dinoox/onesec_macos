@@ -10,6 +10,7 @@ import Foundation
 import Network
 
 enum ConnState {
+    case preparing
     case disconnected
     case connecting
     case failed
@@ -26,7 +27,7 @@ enum UDSClientError: Error {
 
 final class UDSClient: @unchecked Sendable {
     private var connection: NWConnection?
-    @Published  var connectionState: ConnState = .disconnected
+    @Published var connectionState: ConnState = .disconnected
 
     private let queue = DispatchQueue(label: "uds.client.queue")
     private var messsageBuffer = Data()
@@ -91,6 +92,7 @@ final class UDSClient: @unchecked Sendable {
                 log.info("connect failed")
                 scheduleReconnect(reason: "连接失败")
             case .cancelled: connectionState = .cancelled
+            case .preparing: connectionState = .preparing
             default:
                 log.debug("current connection state - \(state)")
             }

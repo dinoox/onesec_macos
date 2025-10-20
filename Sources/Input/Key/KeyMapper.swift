@@ -7,7 +7,6 @@
 
 import Foundation
 
-/// 键码映射器
 class KeyMapper {
     static let keyCodeMap: [Int64: String] = [
         // 字母键
@@ -61,13 +60,6 @@ class KeyMapper {
         63: "Fn"
     ]
     
-    /// 将键码转换为可读字符串
-    /// - Parameter keyCode: 键码
-    /// - Returns: 对应的字符串描述
-    static func keyCodeToString(_ keyCode: Int64) -> String {
-        keyCodeMap[keyCode] ?? "Key(\(keyCode))"
-    }
-    
     /// 反向映射：从字符串到键码
     static let stringToKeyCodeMap: [String: Int64] = {
         var map: [String: Int64] = [:]
@@ -106,28 +98,22 @@ class KeyMapper {
     /// - Parameter keyString: 按键组合字符串，如 "Fn+Space" 或 "Fn"
     /// - Returns: 对应的键码数组，如果有无效按键则返回 nil
     static func parseKeyString(_ keyString: String) -> [Int64]? {
-        // 去除首尾空格
+        // 去首尾空格
         let trimmed = keyString.trimmingCharacters(in: .whitespaces)
         
         // 按 + 分割
         let keys = trimmed.split(separator: "+").map { $0.trimmingCharacters(in: .whitespaces) }
         
-        var keyCodes: [Int64] = []
-        for key in keys {
-            // 尝试在映射表中查找
-            if let keyCode = stringToKeyCodeMap[key] {
-                keyCodes.append(keyCode)
-            } else {
-                return nil
-            }
-        }
+        let keyCodes = keys.compactMap { stringToKeyCodeMap[$0] }
+        guard keyCodes.count == keys.count else { return nil }
         
         return keyCodes
     }
     
-    /// 将键码数组转换为组合按键字符串
-    /// - Parameter keyCodes: 键码集合
-    /// - Returns: 用 "+" 连接的按键描述字符串，如 "Fn+Space"
+    static func keyCodeToString(_ keyCode: Int64) -> String {
+        keyCodeMap[keyCode] ?? "Key(\(keyCode))"
+    }
+    
     static func keyCodesToString(_ keyCodes: some Collection<Int64>) -> String {
         keyCodes
             .compactMap { keyCodeMap[$0] }

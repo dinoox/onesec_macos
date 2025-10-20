@@ -54,6 +54,19 @@ extension Color {
     }
 }
 
+extension String {
+    enum ANSIColor: String {
+        case reset = "\u{001B}[0m"
+        case green = "\u{001B}[38;2;78;172;103m" // RGB(78, 172, 103) - SwiftyBeaver debug 绿色
+    }
+
+    func colored(_ color: ANSIColor) -> String {
+        "\(color.rawValue)\(self)\(ANSIColor.reset.rawValue)"
+    }
+
+    var green: String { colored(.green) }
+}
+
 extension Image {
     static func systemSymbol(_ name: String) -> Image {
         if #available(macOS 11.0, *) {

@@ -28,7 +28,7 @@ final class PermissionManager: ObservableObject, @unchecked Sendable {
     
     @Published var microphonePermissionStatus: PermissionStatus = .notDetermined
     @Published var accessibilityPermissionStatus: PermissionStatus = .notDetermined
-    @Published var permissionStatusList: [PermissionType: PermissionStatus] = [:]
+    @Published var permissionsState: [PermissionType: PermissionStatus] = [:]
     
     private var cancellables = Set<AnyCancellable>()
     private var timer: Timer?
@@ -60,7 +60,6 @@ final class PermissionManager: ObservableObject, @unchecked Sendable {
     
     /// 启动时检查并申请所有权限
     func checkAllPermissions(completion: @escaping ([PermissionType: PermissionStatus]) -> Void) {
-        // 首先更新所有权限的初始状态
         updateAllPermissionStatus()
         
         var results: [PermissionType: PermissionStatus] = [:]
@@ -97,7 +96,7 @@ final class PermissionManager: ObservableObject, @unchecked Sendable {
         }
         
         group.notify(queue: .main) { [weak self] in
-            self?.permissionStatusList = results
+            self?.permissionsState = results
             completion(results)
         }
     }
@@ -177,7 +176,7 @@ final class PermissionManager: ObservableObject, @unchecked Sendable {
             self?.updateAllPermissionStatus()
         }
         
-        // 监听应用激活事件，当应用重新激活时检查权限
+        // 监听应用激活事件
         NotificationCenter.default.addObserver(
             forName: NSApplication.didBecomeActiveNotification,
             object: nil,
@@ -187,25 +186,30 @@ final class PermissionManager: ObservableObject, @unchecked Sendable {
         }
     }
     
-    /// 更新所有权限状态
     func updateAllPermissionStatus() {
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             let newMicStatus = checkStatus(.microphone)
             let newAccessStatus = checkStatus(.accessibility)
             
+            var hasChanges = false
+            
             if microphonePermissionStatus != newMicStatus {
                 microphonePermissionStatus = newMicStatus
+                hasChanges = true
             }
             
             if accessibilityPermissionStatus != newAccessStatus {
                 accessibilityPermissionStatus = newAccessStatus
+                hasChanges = true
             }
             
-            permissionStatusList = [
-                .microphone: newMicStatus,
-                .accessibility: newAccessStatus
-            ]
+            if hasChanges {
+                permissionsState = [
+                    .microphone: newMicStatus,
+                    .accessibility: newAccessStatus
+                ]
+            }
         }
     }
     
