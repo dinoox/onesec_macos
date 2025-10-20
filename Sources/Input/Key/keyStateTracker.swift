@@ -129,12 +129,12 @@ class KeyStateTracker {
     }
     
     private func addKey(_ keyCode: Int64) {
-        log.info("😑 按下: \(KeyMapper.keyCodeToString(keyCode))")
+        // log.info("😑 按下: \(KeyMapper.keyCodeToString(keyCode))")
         pressedKeys.insert(keyCode)
     }
     
     private func removeKey(_ keyCode: Int64) {
-        log.info("🥹 松开: \(KeyMapper.keyCodeToString(keyCode))")
+        // log.info("🥹 松开: \(KeyMapper.keyCodeToString(keyCode))")
         pressedKeys.remove(keyCode)
     }
     

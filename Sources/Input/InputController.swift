@@ -28,8 +28,8 @@ class InputController {
 
         Task {
             await StatusPanelManager.shared.showPanel()
-            try? await Task.sleep(nanoseconds: 2_000_000_000)
-            EventBus.shared.publish(.notificationReceived(.recordingFailed))
+           try? await Task.sleep(nanoseconds: 2_000_000_000)
+           EventBus.shared.publish(.notificationReceived(.recordingFailed))
         }
 
         log.info("InputController initialized")

@@ -22,7 +22,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     private var sinkNode: AVAudioSinkNode!
     private var converter: AVAudioConverter!
     
-    private var audioQueue = Deque<Data>()
+    private var audioQueue: Deque<Data> = .init()
     private var recordState: RecordState = .idle
     
     // 响应式流处理

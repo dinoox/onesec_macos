@@ -26,7 +26,7 @@ struct NotificationCard: View {
             HStack(alignment: .center, spacing: 12) {
                 ZStack {
                     Image.systemSymbol("bell.fill")
-                        .font(.system(size: 20))
+                        .font(.system(size: 18))
                         .foregroundColor(iconColor)
                 }
                 
@@ -39,7 +39,7 @@ struct NotificationCard: View {
                     
                     // 内容
                     Text(content)
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.85))
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)

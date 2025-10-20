@@ -37,12 +37,10 @@ class EventBus: @unchecked Sendable {
     }
 
     // 订阅所有
-    var events: AnyPublisher<AppEvent, Never> {
-        eventSubject.eraseToAnyPublisher()
-    }
+    lazy var events: AnyPublisher<AppEvent, Never> = eventSubject.share().eraseToAnyPublisher()
 
     func subscribe<T>(to eventType: T.Type) -> AnyPublisher<T, Never> {
-        eventSubject
+        eventSubject.share()
             .compactMap { event in
                 if case let loginEvent as T = event {
                     return loginEvent
@@ -55,7 +53,7 @@ class EventBus: @unchecked Sendable {
 
 extension EventBus {
     var volumeChanged: AnyPublisher<Float, Never> {
-        eventSubject
+        eventSubject.share()
             .compactMap { event in
                 guard case .volumeChanged(let volume) = event else { return nil }
                 return volume
