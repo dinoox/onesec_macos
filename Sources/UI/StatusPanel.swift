@@ -67,7 +67,6 @@ class StatusPanel: NSPanel {
         
         contentView.layoutSubtreeIfNeeded()
         let newSize = contentView.fittingSize
-        log.debug("new size: \(newSize.width) \(newSize.height)")
         
         // 检查尺寸是否真的变化了（允许 1 像素的误差）
         let sizeChanged = abs(newSize.width - lastContentSize.width) > 1.0 ||
@@ -88,7 +87,6 @@ class StatusPanel: NSPanel {
         // 计算底部居中的 frame
         guard let newFrame = calculateBottomCenterFrame(for: frameSize) else { return }
         
-        // 设置标志位，防止在 setFrame 期间再次调用
         isResizing = true
         setFrame(newFrame, display: true, animate: false)
         isResizing = false
@@ -131,13 +129,5 @@ class StatusPanelManager {
         }, completionHandler: {
             self.panel?.orderOut(nil)
         })
-    }
-    
-    func togglePanel() {
-        if panel?.isVisible == true {
-            hidePanel()
-        } else {
-            showPanel()
-        }
     }
 }
