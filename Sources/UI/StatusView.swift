@@ -51,6 +51,12 @@ struct StatusView: View {
                 title: title,
                 content: content,
                 modeColor: recording.modeColor,
+                onClose: !autoHide ? {
+                    if let panelId = notificationPanelId {
+                            overlay.hideOverlay(uuid: panelId)
+                            notificationPanelId = nil
+                        }
+                    } : nil
             )
         }
         notificationPanelId = uuid

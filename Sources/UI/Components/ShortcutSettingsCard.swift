@@ -10,7 +10,7 @@ struct ShortcutSettingsState {
 // 单个按键显示组件
 struct KeyCapView: View {
     let keyName: String
-    
+
     var displayText: String {
         // 简化显示文本，提取符号
         if keyName.contains("Command") || keyName.contains("⌘") {
@@ -35,10 +35,10 @@ struct KeyCapView: View {
             keyName
         }
     }
-    
+
     var body: some View {
         Text(displayText)
-            .font(.system(size: 12, weight: .medium))
+            .font(.system(size: 11, weight: .medium))
             .foregroundColor(.keyText)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -56,7 +56,7 @@ struct ShortcutInputField: View {
     @Binding var currentEditingMode: RecordMode?
     @Binding var conflictError: String?
     @State private var cancellables = Set<AnyCancellable>()
-    
+
     var isEditing: Bool {
         currentEditingMode == mode
     }
@@ -64,12 +64,11 @@ struct ShortcutInputField: View {
     var modeColor: Color {
         mode == .normal ? auroraGreen : starlightYellow
     }
-    
-    // 按照标准顺序排序快捷键
+
     var sortedKeyCodes: [Int64] {
         KeyMapper.sortKeyCodes(keyCodes)
     }
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             HStack(spacing: 4) {
@@ -80,7 +79,7 @@ struct ShortcutInputField: View {
                 } else {
                     ForEach(Array(sortedKeyCodes.enumerated()), id: \.offset) { index, keyCode in
                         KeyCapView(keyName: KeyMapper.keyCodeToString(keyCode))
-                        
+
                         if index < sortedKeyCodes.count - 1 {
                             Text("+")
                                 .font(.system(size: 10))
@@ -88,9 +87,9 @@ struct ShortcutInputField: View {
                         }
                     }
                 }
-                
+
                 Spacer()
-                
+
                 if isEditing {
                     Text("等待捷键")
                         .font(.system(size: 10))
@@ -98,8 +97,8 @@ struct ShortcutInputField: View {
                 }
             }
             .frame(height: 24)
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
             .background(
                 RoundedRectangle(cornerRadius: 12)
                     .fill(isEditing ? modeColor.opacity(0.15) : Color.inputBackground)
@@ -121,7 +120,6 @@ struct ShortcutInputField: View {
             }
             .onTapGesture {
                 guard !isEditing else { return }
-                // 清除错误提示
                 conflictError = nil
                 startEditing()
             }
@@ -129,7 +127,7 @@ struct ShortcutInputField: View {
             .onAppear {
                 setupEventListeners()
             }
-            
+
             // 冲突错误提示
             if let error = conflictError {
                 Text(error)
@@ -140,12 +138,12 @@ struct ShortcutInputField: View {
             }
         }
     }
-    
+
     private func startEditing() {
         currentEditingMode = mode
         EventBus.shared.publish(.hotkeySettingStarted(mode: mode))
     }
-    
+
     private func setupEventListeners() {
         EventBus.shared.events.receive(on: DispatchQueue.main)
             .sink { event in
@@ -154,11 +152,11 @@ struct ShortcutInputField: View {
                     guard eventMode == mode else { return }
                     let codes = combination.compactMap { KeyMapper.stringToKeyCodeMap[$0] }
                     keyCodes = codes
-                    
+
                 case .hotkeySettingResulted(let eventMode, _, _):
                     guard eventMode == mode else { return }
                     currentEditingMode = nil
-                    
+
                 default:
                     break
                 }
@@ -175,7 +173,9 @@ struct ShortcutSettingsCard: View {
     @State private var normalConflictError: String? = nil
     @State private var commandConflictError: String? = nil
     @State private var cancellables = Set<AnyCancellable>()
-    
+
+    @State private var isCloseHovered = false
+
     var body: some View {
         VStack(spacing: 0) {
             // 标题栏
@@ -183,23 +183,20 @@ struct ShortcutSettingsCard: View {
                 Text("快捷键设置")
                     .font(.system(size: 14, weight: .semibold))
                     .foregroundColor(.overlayText)
-                
+
                 Spacer()
-                
+
                 // 关闭按钮
                 Button(action: onClose) {
-                    Text("✕")
-                        .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.buttonText)
-                        .frame(width: 24, height: 24)
-                        .background(
-                            Circle()
-                                .fill(Color.buttonBackground)
-                        )
+                    Image.systemSymbol("xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundColor(
+                            isCloseHovered ? Color.red.opacity(0.8) : Color.gray.opacity(0.5))
                 }
                 .buttonStyle(.plain)
+                .animation(.easeInOut(duration: 0.2), value: isCloseHovered)
                 .onHover { hovering in
-                    print("hovering: \(hovering)")
+                    isCloseHovered = hovering
                     if hovering {
                         NSCursor.pointingHand.push()
                     } else {
@@ -210,15 +207,15 @@ struct ShortcutSettingsCard: View {
             .padding(.horizontal, 16)
             .padding(.top, 12)
             .padding(.bottom, 6)
-            
+
             // 主内容区域
-            VStack(alignment: .leading, spacing: 16) {
+            VStack(alignment: .leading, spacing: 14) {
                 // 第一行：普通模式
                 VStack(alignment: .leading, spacing: 8) {
                     Text("普通模式")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.overlaySecondaryText)
-                    
+
                     ShortcutInputField(
                         mode: .normal,
                         keyCodes: $normalKeyCodes,
@@ -226,13 +223,13 @@ struct ShortcutSettingsCard: View {
                         conflictError: $normalConflictError
                     )
                 }
-                
+
                 // 第二行：命令模式
                 VStack(alignment: .leading, spacing: 8) {
                     Text("命令模式")
                         .font(.system(size: 12, weight: .medium))
                         .foregroundColor(.overlaySecondaryText)
-                    
+
                     ShortcutInputField(
                         mode: .command,
                         keyCodes: $commandKeyCodes,
@@ -255,8 +252,9 @@ struct ShortcutSettingsCard: View {
         .overlay(
             RoundedRectangle(cornerRadius: 18)
                 .strokeBorder(
-                    currentEditingMode != nil 
-                        ? (currentEditingMode == .normal ? auroraGreen : starlightYellow).opacity(0.3)
+                    currentEditingMode != nil
+                        ? (currentEditingMode == .normal ? auroraGreen : starlightYellow).opacity(
+                            0.3)
                         : Color.overlayBorder,
                     lineWidth: 1
                 )
@@ -272,35 +270,42 @@ struct ShortcutSettingsCard: View {
             // 加载快捷键配置
             normalKeyCodes = Config.NORMAL_KEY_CODES
             commandKeyCodes = Config.COMMAND_KEY_CODES
-            
+
             // 监听快捷键设置结果事件
             EventBus.shared.events
                 .receive(on: DispatchQueue.main)
                 .sink { [self] event in
-                    if case .hotkeySettingResulted(let mode, let combination, let isConflict) = event {
-                        handleHotkeySettingResulted(mode: mode, combination: combination, isConflict: isConflict)
+                    if case .hotkeySettingResulted(let mode, let combination, let isConflict) =
+                        event
+                    {
+                        handleHotkeySettingResulted(
+                            mode: mode, combination: combination, isConflict: isConflict)
                     }
                 }
                 .store(in: &cancellables)
         }
     }
-    
+
     private func cancelEditing() {
         if let mode = currentEditingMode {
             let originalCodes = mode == .normal ? Config.NORMAL_KEY_CODES : Config.COMMAND_KEY_CODES
             let combination = originalCodes.map { KeyMapper.keyCodeToString($0) }
-            EventBus.shared.publish(.hotkeySettingResulted(mode: mode, hotkeyCombination: combination))
+            EventBus.shared.publish(
+                .hotkeySettingResulted(mode: mode, hotkeyCombination: combination))
             currentEditingMode = nil
         }
     }
-    
-    private func handleHotkeySettingResulted(mode: RecordMode, combination: [String], isConflict: Bool) {
-        let newKeyCodes = KeyMapper.sortKeyCodes(combination.compactMap { KeyMapper.stringToKeyCodeMap[$0] })
-        
+
+    private func handleHotkeySettingResulted(
+        mode: RecordMode, combination: [String], isConflict: Bool
+    ) {
+        let newKeyCodes = KeyMapper.sortKeyCodes(
+            combination.compactMap { KeyMapper.stringToKeyCodeMap[$0] })
+
         if isConflict {
             // 冲突：恢复原来的快捷键
             let originalCodes = mode == .normal ? Config.NORMAL_KEY_CODES : Config.COMMAND_KEY_CODES
-            
+
             if mode == .normal {
                 normalKeyCodes = originalCodes
                 normalConflictError = "与命令模式快捷键冲突"
@@ -308,7 +313,7 @@ struct ShortcutSettingsCard: View {
                 commandKeyCodes = originalCodes
                 commandConflictError = "与普通模式快捷键冲突"
             }
-            
+
             Task {
                 try? await Task.sleep(nanoseconds: 3_000_000_000)
                 if mode == .normal {

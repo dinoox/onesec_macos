@@ -9,6 +9,7 @@ import SwiftUI
 
 let auroraGreen = Color(hex: "#2EDDA8")
 let starlightYellow = Color(hex: "#ffd479")
+let borderGrey = Color(hex: "#888888B2")
 
 // MARK: - 自适应主题颜色 根据系统外观自动切换
 
