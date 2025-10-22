@@ -24,13 +24,13 @@ struct NotificationCard: View {
                 // 标题
                 Text(title)
                     .font(.system(size: 13, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.overlayText)
                     .lineLimit(1)
 
                 // 内容
                 Text(content)
                     .font(.system(size: 11))
-                    .foregroundColor(.white.opacity(0.85))
+                    .foregroundColor(.overlaySecondaryText)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -42,13 +42,13 @@ struct NotificationCard: View {
         .frame(width: 240)
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(bgBlack),
+                .fill(Color.overlayBackground)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .overlay(
             RoundedRectangle(cornerRadius: 18)
-                .strokeBorder(modeColor.opacity(0.3), lineWidth: 1),
+                .strokeBorder(modeColor.opacity(0.3), lineWidth: 1)
         )
-          .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 2)
+        .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 2)
     }
 }

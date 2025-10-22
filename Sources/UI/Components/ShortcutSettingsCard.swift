@@ -39,12 +39,12 @@ struct KeyCapView: View {
     var body: some View {
         Text(displayText)
             .font(.system(size: 12, weight: .medium))
-            .foregroundColor(Color(red: 161/255, green: 161/255, blue: 161/255))
+            .foregroundColor(.keyText)
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(red: 38/255, green: 38/255, blue: 38/255)),
+                    .fill(Color.keyBackground)
             )
             .shadow(color: .black.opacity(0.15), radius: 2, x: 0, y: 1)
     }
@@ -76,7 +76,7 @@ struct ShortcutInputField: View {
                 if keyCodes.isEmpty {
                     Text("点击设置")
                         .font(.system(size: 11))
-                        .foregroundColor(.white.opacity(0.5))
+                        .foregroundColor(.overlayPlaceholder)
                 } else {
                     ForEach(Array(sortedKeyCodes.enumerated()), id: \.offset) { index, keyCode in
                         KeyCapView(keyName: KeyMapper.keyCodeToString(keyCode))
@@ -84,7 +84,7 @@ struct ShortcutInputField: View {
                         if index < sortedKeyCodes.count - 1 {
                             Text("+")
                                 .font(.system(size: 10))
-                                .foregroundColor(.white.opacity(0.5))
+                                .foregroundColor(.overlayPlaceholder)
                         }
                     }
                 }
@@ -102,14 +102,14 @@ struct ShortcutInputField: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 12)
-                    .fill(isEditing ? modeColor.opacity(0.15) : Color.white.opacity(0.08)),
+                    .fill(isEditing ? modeColor.opacity(0.15) : Color.inputBackground)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 12)
                     .strokeBorder(
-                        isEditing ? modeColor.opacity(0.3) : Color.white.opacity(0.15),
-                        lineWidth: 1,
-                    ),
+                        isEditing ? modeColor.opacity(0.3) : Color.inputBorder,
+                        lineWidth: 1
+                    )
             )
             .contentShape(Rectangle())
             .onHover { hovering in
@@ -182,7 +182,7 @@ struct ShortcutSettingsCard: View {
             HStack {
                 Text("快捷键设置")
                     .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(.white)
+                    .foregroundColor(.overlayText)
                 
                 Spacer()
                 
@@ -190,11 +190,11 @@ struct ShortcutSettingsCard: View {
                 Button(action: onClose) {
                     Text("✕")
                         .font(.system(size: 14, weight: .medium))
-                        .foregroundColor(.white.opacity(0.7))
+                        .foregroundColor(.buttonText)
                         .frame(width: 24, height: 24)
                         .background(
                             Circle()
-                                .fill(Color.white.opacity(0.1)),
+                                .fill(Color.buttonBackground)
                         )
                 }
                 .buttonStyle(.plain)
@@ -217,13 +217,13 @@ struct ShortcutSettingsCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("普通模式")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(.overlaySecondaryText)
                     
                     ShortcutInputField(
                         mode: .normal,
                         keyCodes: $normalKeyCodes,
                         currentEditingMode: $currentEditingMode,
-                        conflictError: $normalConflictError,
+                        conflictError: $normalConflictError
                     )
                 }
                 
@@ -231,13 +231,13 @@ struct ShortcutSettingsCard: View {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("命令模式")
                         .font(.system(size: 12, weight: .medium))
-                        .foregroundColor(.white.opacity(0.9))
+                        .foregroundColor(.overlaySecondaryText)
                     
                     ShortcutInputField(
                         mode: .command,
                         keyCodes: $commandKeyCodes,
                         currentEditingMode: $currentEditingMode,
-                        conflictError: $commandConflictError,
+                        conflictError: $commandConflictError
                     )
                 }
             }
@@ -249,7 +249,7 @@ struct ShortcutSettingsCard: View {
         .frame(width: 280)
         .background(
             RoundedRectangle(cornerRadius: 18)
-                .fill(bgBlack),
+                .fill(Color.overlayBackground)
         )
         .clipShape(RoundedRectangle(cornerRadius: 18))
         .overlay(
@@ -257,9 +257,9 @@ struct ShortcutSettingsCard: View {
                 .strokeBorder(
                     currentEditingMode != nil 
                         ? (currentEditingMode == .normal ? auroraGreen : starlightYellow).opacity(0.3)
-                        : Color.white.opacity(0.3),
+                        : Color.overlayBorder,
                     lineWidth: 1
-                ),
+                )
         )
         .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 2)
         .animation(.easeInOut(duration: 0.2), value: currentEditingMode)
