@@ -39,9 +39,7 @@ struct StatusView: View {
         }
     }
 
-    // 显示通知的方法
-    private func showNotificationMessage(title: String, content: String, autoHide: Bool = true) {
-        // 关闭之前的通知
+    private func showNotificationMessage(title: String, content: String, autoHide: Bool = true, onTap: (() -> Void)? = nil) {
         if let panelId = notificationPanelId {
             overlay.hideOverlay(uuid: panelId)
         }
@@ -53,10 +51,11 @@ struct StatusView: View {
                 modeColor: recording.modeColor,
                 onClose: !autoHide ? {
                     if let panelId = notificationPanelId {
-                            overlay.hideOverlay(uuid: panelId)
-                            notificationPanelId = nil
-                        }
-                    } : nil
+                        overlay.hideOverlay(uuid: panelId)
+                        notificationPanelId = nil
+                    }
+                } : nil,
+                onTap: onTap,
             )
         }
         notificationPanelId = uuid
@@ -64,6 +63,46 @@ struct StatusView: View {
         if autoHide {
             overlay.setAutoHide(uuid: uuid, after: 3.0)
         }
+    }
+
+    private func handlePermissionChange(_ permissionsState: [PermissionType: PermissionStatus]) {
+        guard !permissionsState.isEmpty else { return }
+        
+        if !ConnectionCenter.shared.hasPermissions() {
+            if notificationPanelId == nil {
+                showPermissionAlert()
+            }
+        } else if let panelId = notificationPanelId {
+            overlay.hideOverlay(uuid: panelId)
+            notificationPanelId = nil
+        }
+    }
+
+    private func showPermissionAlert() {
+        let permissionState = ConnectionCenter.shared.permissionsState
+        var missingPermissions: [String] = []
+
+        if permissionState[.microphone] != .granted {
+            missingPermissions.append("麦克风")
+        }
+        if permissionState[.accessibility] != .granted {
+            missingPermissions.append("辅助功能")
+        }
+
+        guard !missingPermissions.isEmpty else { return }
+
+        showNotificationMessage(
+            title: "权限缺失",
+            content: "需要\(missingPermissions.joined(separator: "、"))权限，点击前往设置",
+            autoHide: false,
+            onTap: {
+                if permissionState[.accessibility] != .granted {
+                    PermissionManager.shared.request(.accessibility) { _ in }
+                } else if permissionState[.microphone] != .granted {
+                    PermissionManager.shared.request(.microphone) { _ in }
+                }
+            },
+        )
     }
 
     var body: some View {
@@ -74,7 +113,6 @@ struct StatusView: View {
                 volume: recording.volume,
                 mode: recording.mode,
             ).onTapGesture {
-                // 点击时隐藏所有 overlay 并显示菜单
                 overlay.hideAllOverlays()
                 showMenu()
             }
@@ -86,6 +124,12 @@ struct StatusView: View {
                     .receive(on: DispatchQueue.main),
             ) { event in
                 handleEvent(event)
+            }
+            .onReceive(
+                ConnectionCenter.shared.$permissionsState
+                    .receive(on: DispatchQueue.main),
+            ) { permissionsState in
+                handlePermissionChange(permissionsState)
             }
     }
 

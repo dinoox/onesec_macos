@@ -7,37 +7,12 @@ struct ShortcutSettingsState {
     var opacity: Double = 0
 }
 
-// 单个按键显示组件
+
 struct KeyCapView: View {
     let keyName: String
 
-    var displayText: String {
-        // 简化显示文本，提取符号
-        if keyName.contains("Command") || keyName.contains("⌘") {
-            "⌘"
-        } else if keyName.contains("Option") || keyName.contains("⌥") {
-            "⌥"
-        } else if keyName.contains("Control") || keyName.contains("⌃") {
-            "⌃"
-        } else if keyName.contains("Shift") || keyName.contains("⇧") {
-            "⇧"
-        } else if keyName == "Space" {
-            "Space"
-        } else if keyName == "Return" {
-            "↩"
-        } else if keyName == "Delete" {
-            "⌫"
-        } else if keyName == "Escape" {
-            "⎋"
-        } else if keyName == "Tab" {
-            "⇥"
-        } else {
-            keyName
-        }
-    }
-
     var body: some View {
-        Text(displayText)
+        Text(KeyMapper.getDisplayText(for: keyName))
             .font(.system(size: 11, weight: .medium))
             .foregroundColor(.keyText)
             .padding(.horizontal, 8)
@@ -128,7 +103,6 @@ struct ShortcutInputField: View {
                 setupEventListeners()
             }
 
-            // 冲突错误提示
             if let error = conflictError {
                 Text(error)
                     .font(.system(size: 10))
@@ -208,9 +182,8 @@ struct ShortcutSettingsCard: View {
             .padding(.top, 12)
             .padding(.bottom, 6)
 
-            // 主内容区域
             VStack(alignment: .leading, spacing: 14) {
-                // 第一行：普通模式
+                // 普通模式
                 VStack(alignment: .leading, spacing: 8) {
                     Text("普通模式")
                         .font(.system(size: 12, weight: .medium))
@@ -224,7 +197,7 @@ struct ShortcutSettingsCard: View {
                     )
                 }
 
-                // 第二行：命令模式
+                // 命令模式
                 VStack(alignment: .leading, spacing: 8) {
                     Text("命令模式")
                         .font(.system(size: 12, weight: .medium))
@@ -263,7 +236,6 @@ struct ShortcutSettingsCard: View {
         .animation(.easeInOut(duration: 0.2), value: currentEditingMode)
         .contentShape(Rectangle())
         .onTapGesture {
-            // 点击卡片的任何地方都取消编辑
             cancelEditing()
         }
         .onAppear {

@@ -142,4 +142,31 @@ class KeyMapper {
         if keyName.contains("Command") || keyName.contains("⌘") { return 4 }
         return 5 // 其他键（字母、数字等）
     }
+    
+    /// 获取按键的显示文本（简化符号）
+    /// - Parameter keyName: 按键名称
+    /// - Returns: 用于显示的文本
+    static func getDisplayText(for keyName: String) -> String {
+        if keyName.contains("Command") || keyName.contains("⌘") {
+            return "⌘"
+        } else if keyName.contains("Option") || keyName.contains("⌥") {
+            return "⌥"
+        } else if keyName.contains("Control") || keyName.contains("⌃") {
+            return "⌃"
+        } else if keyName.contains("Shift") || keyName.contains("⇧") {
+            return "⇧"
+        } else if keyName == "Space" {
+            return "Space"
+        } else if keyName == "Return" {
+            return "↩"
+        } else if keyName == "Delete" {
+            return "⌫"
+        } else if keyName == "Escape" {
+            return "⎋"
+        } else if keyName == "Tab" {
+            return "⇥"
+        } else {
+            return keyName
+        }
+    }
 }

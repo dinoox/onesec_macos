@@ -42,7 +42,9 @@ class ConnectionCenter: @unchecked Sendable {
     }
 
     func hasPermissions() -> Bool {
-        permissionsState.values.allSatisfy { $0 == .granted }
+        // 必须两个权限都存在且都是 granted 状态
+        guard permissionsState.count != 0 else { return false }
+        return permissionsState.values.allSatisfy { $0 == .granted }
     }
 }
 

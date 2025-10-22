@@ -12,8 +12,10 @@ struct NotificationCard: View {
     let content: String
     let modeColor: Color
     let onClose: (() -> Void)?
+    let onTap: (() -> Void)?
 
     @State private var isCloseHovered = false
+    @State private var isCardHovered = false
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
@@ -51,9 +53,22 @@ struct NotificationCard: View {
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .overlay(
                 RoundedRectangle(cornerRadius: 18)
-                    .strokeBorder(modeColor.opacity(0.3), lineWidth: 1),
+                    .strokeBorder(modeColor.opacity(isCardHovered ? 0.5 : 0.3), lineWidth: 1),
             )
             .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 2)
+            .onTapGesture {
+                onTap?()
+            }
+            .onHover { hovering in
+                if onTap != nil {
+                    isCardHovered = hovering
+                    if hovering {
+                        NSCursor.pointingHand.push()
+                    } else {
+                        NSCursor.pop()
+                    }
+                }
+            }
 
             if let onClose {
                 Button(action: onClose) {
@@ -69,5 +84,7 @@ struct NotificationCard: View {
                 .contentShape(Rectangle())
             }
         }
+        .scaleEffect(isCardHovered ? 1.02 : 1.0)
+        .animation(.easeInOut(duration: 0.15), value: isCardHovered)
     }
 }

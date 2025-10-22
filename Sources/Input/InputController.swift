@@ -19,20 +19,33 @@ class InputController {
     private var eventTap: CFMachPort?
     /// 运行循环源
     private var runLoopSource: CFRunLoopSource?
+    /// 保存创建时的 run loop
+    private var runLoop: CFRunLoop?
 
     private var cancellables = Set<AnyCancellable>()
 
     init() {
         initializeEventHandler()
         initializeTapListener()
+        log.info("InputController initialized")
+    }
 
-        Task {
-            await StatusPanelManager.shared.showPanel()
-            // try? await Task.sleep(nanoseconds: 1_000_000_000)
-            // EventBus.shared.publish(.notificationReceived(.recordingFailed))
+    deinit {
+        // 禁用事件监听器
+        if let eventTap = eventTap {
+            CGEvent.tapEnable(tap: eventTap, enable: false)
         }
 
-        log.info("InputController initialized")
+        // 从运行循环中移除源
+        if let runLoopSource = runLoopSource, let runLoop = runLoop {
+            CFRunLoopRemoveSource(runLoop, runLoopSource, .commonModes)
+        }
+
+        // 清空引用
+        eventTap = nil
+        runLoopSource = nil
+        runLoop = nil
+        log.info("InputController deinitialized")
     }
 
     private func initializeTapListener() {
@@ -48,9 +61,12 @@ class InputController {
             userInfo: Unmanaged.passUnretained(self).toOpaque(),
         )
 
+        // 保存当前运行循环
+        runLoop = CFRunLoopGetCurrent()
+
         // 创建运行循环源
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0)
-        CFRunLoopAddSource(CFRunLoopGetCurrent(), runLoopSource, .commonModes)
+        CFRunLoopAddSource(runLoop, runLoopSource, .commonModes)
 
         // 启用事件监听器
         CGEvent.tapEnable(tap: eventTap!, enable: true)
@@ -162,7 +178,7 @@ extension InputController {
 
         for config in hotkeyConfigs {
             guard let mode = config["mode"] as? String,
-                  let hotkeyCombination = config["hotkey_combination"] as? [String]
+                let hotkeyCombination = config["hotkey_combination"] as? [String]
             else {
                 continue
             }

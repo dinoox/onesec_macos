@@ -150,7 +150,7 @@ struct StatusIndicator: View {
                         )
                         .overlay(
                             RoundedRectangle(cornerRadius: 12)
-                                .strokeBorder(borderGrey, lineWidth: 1)
+                                .strokeBorder(borderGrey.opacity(0.8), lineWidth: 1)
                         )
                         .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 2)
                 }
