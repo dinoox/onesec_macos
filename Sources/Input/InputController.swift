@@ -19,7 +19,6 @@ class InputController {
     private var eventTap: CFMachPort?
     /// 运行循环源
     private var runLoopSource: CFRunLoopSource?
-    /// 保存创建时的 run loop
     private var runLoop: CFRunLoop?
 
     private var cancellables = Set<AnyCancellable>()
@@ -31,20 +30,14 @@ class InputController {
     }
 
     deinit {
-        // 禁用事件监听器
-        if let eventTap = eventTap {
+        if let eventTap {
             CGEvent.tapEnable(tap: eventTap, enable: false)
         }
 
-        // 从运行循环中移除源
-        if let runLoopSource = runLoopSource, let runLoop = runLoop {
+        if let runLoopSource, let runLoop {
             CFRunLoopRemoveSource(runLoop, runLoopSource, .commonModes)
         }
 
-        // 清空引用
-        eventTap = nil
-        runLoopSource = nil
-        runLoop = nil
         log.info("InputController deinitialized")
     }
 
@@ -81,10 +74,12 @@ class InputController {
         eventMask |= (1 << CGEventType.flagsChanged.rawValue)
         eventMask |= (1 << CGEventType.keyDown.rawValue)
         eventMask |= (1 << CGEventType.keyUp.rawValue)
-        // eventMask |= (1 << CGEventType.mouseMoved.rawValue)
-        // eventMask |= (1 << CGEventType.leftMouseDragged.rawValue)
-        // eventMask |= (1 << CGEventType.rightMouseDragged.rawValue)
-        // eventMask |= (1 << CGEventType.otherMouseDragged.rawValue)
+        
+        // 监听鼠标移动事件，用于检测鼠标跨屏幕移动
+        eventMask |= (1 << CGEventType.mouseMoved.rawValue)
+        eventMask |= (1 << CGEventType.leftMouseDragged.rawValue)
+        eventMask |= (1 << CGEventType.rightMouseDragged.rawValue)
+        eventMask |= (1 << CGEventType.otherMouseDragged.rawValue)
 
         return CGEventMask(eventMask)
     }
@@ -95,6 +90,12 @@ class InputController {
         guard type != .tapDisabledByTimeout else {
             log.warning("CGEventType tapDisabledByTimeout")
             return nil
+        }
+
+        // 处理鼠标移动事件
+        if type == .mouseMoved || type == .leftMouseDragged || type == .rightMouseDragged || type == .otherMouseDragged {
+            handleMouseEvent(event: event)
+            return Unmanaged.passUnretained(event)
         }
 
         guard event.getIntegerValueField(.keyboardEventAutorepeat) == 0 else {
@@ -119,8 +120,31 @@ class InputController {
             break
         }
 
-        // 返回原始事件
         return Unmanaged.passUnretained(event)
+    }
+    
+    /// 处理鼠标移动事件，检测屏幕切换
+    private func handleMouseEvent(event: CGEvent) {
+        let mouseLocation = event.location
+        
+        // 找到鼠标所在屏幕
+        guard let newScreen = NSScreen.screens.first(where: { screen in
+            NSMouseInRect(
+                NSPoint(x: mouseLocation.x, y: mouseLocation.y),
+                screen.frame,
+                false
+            )
+        }) else {
+            return
+        }
+        
+        let currentScreen = ConnectionCenter.shared.currentMouseScreen
+        
+        // 检测屏幕是否变化
+        if currentScreen == nil || currentScreen != newScreen {
+            ConnectionCenter.shared.currentMouseScreen = newScreen
+            EventBus.shared.publish(.mouseScreenChanged(screen: newScreen))
+        }
     }
 
     private func startRecording(mode: RecordMode) {
@@ -178,7 +202,7 @@ extension InputController {
 
         for config in hotkeyConfigs {
             guard let mode = config["mode"] as? String,
-                let hotkeyCombination = config["hotkey_combination"] as? [String]
+                  let hotkeyCombination = config["hotkey_combination"] as? [String]
             else {
                 continue
             }

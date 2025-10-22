@@ -58,7 +58,6 @@ final class PermissionManager: ObservableObject, @unchecked Sendable {
         }
     }
     
-    /// 启动时检查并申请所有权限
     func checkAllPermissions(completion: @escaping ([PermissionType: PermissionStatus]) -> Void) {
         updateAllPermissionStatus()
         

@@ -5,6 +5,7 @@
 //  Created by 王晓雨 on 2025/10/16.
 //
 
+import AppKit
 import Combine
 import Foundation
 
@@ -24,6 +25,8 @@ enum AppEvent {
     case hotkeySettingEnded(mode: RecordMode, hotkeyCombination: [String])
     case hotkeySettingUpdated(mode: RecordMode, hotkeyCombination: [String])
     case hotkeySettingResulted(mode: RecordMode, hotkeyCombination: [String], isConflict: Bool = false)
+    //
+    case mouseScreenChanged(screen: NSScreen)
 }
 
 class EventBus: @unchecked Sendable {

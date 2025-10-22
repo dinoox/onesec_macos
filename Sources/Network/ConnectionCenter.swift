@@ -5,6 +5,7 @@
 //  Created by 王晓雨 on 2025/10/15.
 //
 
+import AppKit
 import Combine
 import Foundation
 
@@ -18,6 +19,7 @@ class ConnectionCenter: @unchecked Sendable {
     @Published var wssState: ConnState = .disconnected
     @Published var udsState: ConnState = .disconnected
     @Published var permissionsState: [PermissionType: PermissionStatus] = [:]
+    @Published var currentMouseScreen: NSScreen? = nil
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -25,6 +27,7 @@ class ConnectionCenter: @unchecked Sendable {
         udsClient.connect()
         wssClient.connect()
         bind()
+        initScreen()
     }
 
     private func bind() {
@@ -42,7 +45,6 @@ class ConnectionCenter: @unchecked Sendable {
     }
 
     func hasPermissions() -> Bool {
-        // 必须两个权限都存在且都是 granted 状态
         guard permissionsState.count != 0 else { return false }
         return permissionsState.values.allSatisfy { $0 == .granted }
     }
@@ -66,5 +68,14 @@ extension ConnectionCenter {
                 log.debug("\("[\(stateName)]".green) → \("\(newValue)".green)")
             }
             .store(in: &cancellables)
+    }
+
+    func initScreen() {
+        let mouseLocation = NSEvent.mouseLocation
+        if let screen = NSScreen.screens.first(where: { screen in
+            NSMouseInRect(mouseLocation, screen.frame, false)
+        }) {
+            currentMouseScreen = screen
+        }
     }
 }
