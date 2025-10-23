@@ -42,12 +42,10 @@ final class UDSClient: @unchecked Sendable {
         EventBus.shared.events
             .sink { [weak self] event in
                 switch event {
-                case  .notificationReceived(.authTokenFailed): self?.sendAuthTokenFailed()
+                case .notificationReceived(.authTokenFailed): self?.sendAuthTokenFailed()
+
                 case let .hotkeySettingEnded(mode, hotkeyCombination):
                     self?.sendHotkeySettingResult(mode: mode, hotkeyCombination: hotkeyCombination)
-
-                case let .hotkeySettingUpdated(mode, hotkeyCombination):
-                    self?.sendHotkeySettingUpdate(mode: mode, hotkeyCombination: hotkeyCombination)
 
                 default:
                     break
@@ -176,41 +174,14 @@ extension UDSClient {
         log.debug("Reveive message \(json)")
 
         switch type {
-        case .hotkeySetting:
-            handleHotkeySettingMessage(json: json, timestamp: timestamp)
-        case .hotkeySettingEnd:
-            handleHotkeySettingEndMessage(json: json, timestamp: timestamp)
-        case .initConfig:
-            handleInitConfigMessage(json: json, timestamp: timestamp)
+        case .configUpdated:
+            handleConfigUpdatedMessage(json: json, timestamp: timestamp)
         default:
             break
         }
     }
 
-    private func handleHotkeySettingMessage(json: [String: Any], timestamp: Int64) {
-        guard let data = json["data"] as? [String: Any],
-              let mode = data["mode"] as? String
-        else {
-            log.error("UDS 客户端: 快捷键设置消息格式错误")
-            return
-        }
-
-        EventBus.shared.publish(.hotkeySettingStarted(mode: mode == "normal" ? .normal : .command))
-    }
-
-    private func handleHotkeySettingEndMessage(json: [String: Any], timestamp: Int64) {
-        guard let data = json["data"] as? [String: Any],
-              let mode = data["mode"] as? String,
-              let hotkeyCombination = data["hotkey_combination"] as? [String]
-        else {
-            log.error("UDS 客户端: 快捷键设置结束消息格式错误")
-            return
-        }
-
-        EventBus.shared.publish(.hotkeySettingEnded(mode: mode == "normal" ? .normal : .command, hotkeyCombination: hotkeyCombination))
-    }
-
-    private func handleInitConfigMessage(json: [String: Any], timestamp: Int64) {
+    private func handleConfigUpdatedMessage(json: [String: Any], timestamp: Int64) {
         guard
             let data = json["data"] as? [String: Any],
             let authToken = data["auth_token"] as? String,
@@ -219,7 +190,7 @@ extension UDSClient {
             return
         }
 
-        EventBus.shared.publish(.userConfigChanged(authToken: authToken, hotkeyConfigs: hotkeyConfigs))
+        EventBus.shared.publish(.userConfigUpdated(authToken: authToken, hotkeyConfigs: hotkeyConfigs))
     }
 
     func sendAuthTokenFailed(reason: String = "UnAuth", statusCode: Int? = nil) {
@@ -238,21 +209,6 @@ extension UDSClient {
 
         sendJSONMessage(WebSocketMessage.create(type: .authTokenFailed, data: data).toJSON())
         log.info("Client send auth token failed: \(reason), code: \(statusCode ?? 0)")
-    }
-
-    func sendHotkeySettingUpdate(mode: RecordMode, hotkeyCombination: [String]) {
-        guard connectionState == .connected else {
-            log.warning("Client not connected, cant send hotkey setting update")
-            return
-        }
-
-        let data: [String: Any] = [
-            "mode": mode.rawValue,
-            "hotkey_combination": hotkeyCombination
-        ]
-
-        sendJSONMessage(WebSocketMessage.create(type: .hotkeySettingUpdate, data: data).toJSON())
-        log.debug("Client send hotkey setting update: mode=\(mode), combination=\(hotkeyCombination)")
     }
 
     func sendHotkeySettingResult(mode: RecordMode, hotkeyCombination: [String]) {

@@ -81,7 +81,6 @@ class OpusEncoder {
         let samples = UnsafeBufferPointer(start: channelData, count: Int(inputBuffer.frameLength))
         sampleBuffer.append(contentsOf: samples)
 
-        // log.debug("buffer status: \(sampleBuffer.count) samples (need \(frameSize) samples/frame)")
 
         // 处理缓冲区中所有完整的帧
         var frameCount = 0

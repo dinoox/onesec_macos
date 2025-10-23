@@ -124,7 +124,7 @@ extension WebSocketAudioStreamer {
 
                 case .audioDataReceived(let data): sendAudioData(data)
 
-                case .userConfigChanged:
+                case .userConfigUpdated:
                     curRetryCount = 0
                     connect()
 
