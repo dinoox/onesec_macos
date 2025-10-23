@@ -231,21 +231,21 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         }
 
         recordState = .stopping
-
-        // 停止音频引擎
         audioEngine.stop()
 
-        // 刷新 Opus 编码器缓冲区
+        // 刷新 Opus 编码器缓冲区, 发送所有剩余数据
         if let encoder = opusEncoder, let finalData = encoder.flush() {
             audioQueue.append(finalData)
             log.info("📦 Opus encoder flushed final frame: \(finalData.count) bytes")
         }
 
-        // 发送所有剩余数据
         while let audioData = audioQueue.popFirst() {
             sendAudioData(audioData)
         }
-        EventBus.shared.publish(.recordingStopped)
+
+        if isRecordingStarted {
+            EventBus.shared.publish(.recordingStopped)
+        }
 
         // 计算录音统计信息
         if recordingStartTime != nil {
@@ -295,7 +295,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
                 let sample = Float(samples[i]) / Float(Int16.max)
                 sum += sample * sample
             }
-        } else if bytesPerSample == 4 { // 32-bit float
+        } else if bytesPerSample == 4 { // 32-bit
             let samples = audioBuffer.assumingMemoryBound(to: Float.self)
             for i in 0..<frameCount {
                 sum += samples[i] * samples[i]
