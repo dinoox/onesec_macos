@@ -159,13 +159,13 @@ struct StatusView: View {
             recording.state = .idle
 
             var autoHide = true
-            if notificationType == .authTokenFailed || notificationType == .networkUnavailable {
+            if notificationType == .authTokenFailed {
                 autoHide = false
             }
 
             showNotificationMessage(
                 title: notificationType.title, content: notificationType.content,
-                autoHide: autoHide
+                autoHide: autoHide,
             )
         default:
             break

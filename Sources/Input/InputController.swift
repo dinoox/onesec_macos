@@ -162,6 +162,14 @@ class InputController {
             return
         }
 
+        guard
+            ConnectionCenter.shared.wssState == .connected
+                || ConnectionCenter.shared.wssState == .manualDisconnected
+        else {
+            EventBus.shared.publish(.notificationReceived(.networkUnavailable))
+            return
+        }
+
         if ConnectionCenter.shared.wssState == .manualDisconnected {
             ConnectionCenter.shared.connectWss()
         }
@@ -218,7 +226,7 @@ extension InputController {
 
         for config in hotkeyConfigs {
             guard let mode = config["mode"] as? String,
-                  let hotkeyCombination = config["hotkey_combination"] as? [String]
+                let hotkeyCombination = config["hotkey_combination"] as? [String]
             else {
                 continue
             }
