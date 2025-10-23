@@ -65,7 +65,7 @@ extension WebSocketAudioStreamer: WebSocketDelegate {
             // 1) 兼容 Starscream 抛出的 HTTP 升级错误：HTTPUpgradeError
             if let upgrade = error as? HTTPUpgradeError {
                 switch upgrade {
-                case .notAnUpgrade(let statusCode, _ /* headers */ ):
+                case .notAnUpgrade(let statusCode, _ /* headers */):
                     handleHTTPUpgradeFailure(status: statusCode, message: "notAnUpgrade")
                     return
                 case .invalidData:
@@ -77,11 +77,16 @@ extension WebSocketAudioStreamer: WebSocketDelegate {
                 }
             } else {
                 // 其他错误，触发重连
-                scheduleReconnect(reason: "Connection error: \(error?.localizedDescription ?? "Unknown")")
+                scheduleReconnect(
+                    reason: "Connection error: \(error?.localizedDescription ?? "Unknown")")
             }
 
         case .peerClosed:
             log.info("websocket peer closed")
+            guard connectionState != .connecting else {
+                return
+            }
+
             connectionState = .disconnected
             scheduleReconnect(reason: "Peer closed connection")
         }

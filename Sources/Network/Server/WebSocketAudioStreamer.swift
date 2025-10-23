@@ -29,7 +29,7 @@ class WebSocketAudioStreamer: @unchecked Sendable {
 
     // 连接检测 (防止一直卡在 connecting)
     private var connectingCheckTimer: DispatchWorkItem?
-    
+
     // 空闲超时配置 (30分钟没有使用就断开)
     var idleTimeoutTimer: DispatchWorkItem?
     let idleTimeoutDuration: TimeInterval = 30 * 60
@@ -62,7 +62,7 @@ class WebSocketAudioStreamer: @unchecked Sendable {
         ws?.connect()
 
         scheduleConnectingCheck()
-        
+
         log.info("WebSocket start connect with token \(Config.AUTH_TOKEN) \(serverURL)")
     }
 
@@ -280,7 +280,7 @@ extension WebSocketAudioStreamer {
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
             if connectionState == .connecting {
-                log.warning("Still connecting after 3s, reconnect")
+                log.warning("Still connecting after 10s, reconnect")
                 connectionState = .manualDisconnected
                 ws?.disconnect()
                 ws = nil
@@ -291,18 +291,18 @@ extension WebSocketAudioStreamer {
         connectingCheckTimer = workItem
         DispatchQueue.global().asyncAfter(deadline: .now() + 10.0, execute: workItem)
     }
-    
+
     private func scheduleIdleTimer() {
         idleTimeoutTimer?.cancel()
-        
+
         let workItem = DispatchWorkItem { [weak self] in
             guard let self else { return }
-            log.warning("No recording activity for \(idleTimeoutDuration/60) minutes, disconnecting")
+            log.warning("No recording activity for \(idleTimeoutDuration / 60) minutes, disconnecting")
             connectionState = .manualDisconnected
             ws?.disconnect()
             ws = nil
         }
-        
+
         idleTimeoutTimer = workItem
         DispatchQueue.global().asyncAfter(deadline: .now() + idleTimeoutDuration, execute: workItem)
     }
