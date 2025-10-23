@@ -83,7 +83,6 @@ extension WebSocketAudioStreamer: WebSocketDelegate {
         case .peerClosed:
             log.info("websocket peer closed")
             connectionState = .disconnected
-            guard ConnectionCenter.shared.isAuthed else { return }
             scheduleReconnect(reason: "Peer closed connection")
         }
     }

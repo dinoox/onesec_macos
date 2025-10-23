@@ -71,7 +71,7 @@ class WebSocketAudioStreamer: @unchecked Sendable {
     /// - 对端关闭连接（peerClosed）
     /// - 用户配置变更 (userConfigChanged)
     func scheduleReconnect(reason: String) {
-        guard connectionState != .connecting else {
+        guard ConnectionCenter.shared.isAuthed, connectionState != .connecting else {
             log.warning("Already connecting, skip reconnect")
             return
         }
@@ -110,8 +110,7 @@ extension WebSocketAudioStreamer {
                         appInfo: appInfo,
                         focusContext: focusContext,
                         focusElementInfo: focusElementInfo,
-                        recordMode: recordMode
-                    )
+                        recordMode: recordMode)
 
                 case .recordingStopped:
                     sendStopRecording()
@@ -153,7 +152,7 @@ extension WebSocketAudioStreamer {
         appInfo: AppInfo? = nil,
         focusContext: FocusContext? = nil,
         focusElementInfo: FocusElementInfo? = nil,
-        recordMode: RecordMode = .normal
+        recordMode: RecordMode = .normal,
     ) {
         var data: [String: Any] = [
             "recognition_mode": recordMode.rawValue,
@@ -181,7 +180,7 @@ extension WebSocketAudioStreamer {
     }
 
     func sendModeUpgrade(
-        fromMode: RecordMode, toMode: RecordMode, focusContext: FocusContext? = nil
+        fromMode: RecordMode, toMode: RecordMode, focusContext: FocusContext? = nil,
     ) {
         var data: [String: Any] = [
             "from_mode": fromMode.rawValue,
@@ -209,7 +208,7 @@ extension WebSocketAudioStreamer {
         cancelResponseTimeoutTimer()
 
         guard let data = json["data"] as? [String: Any],
-            let summary = data["summary"] as? String
+              let summary = data["summary"] as? String
         else { return }
 
         let serverTime = data["server_time"] as? Int
