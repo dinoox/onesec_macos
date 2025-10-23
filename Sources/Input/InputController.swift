@@ -74,7 +74,7 @@ class InputController {
         eventMask |= (1 << CGEventType.flagsChanged.rawValue)
         eventMask |= (1 << CGEventType.keyDown.rawValue)
         eventMask |= (1 << CGEventType.keyUp.rawValue)
-        
+
         // 监听鼠标移动事件，用于检测鼠标跨屏幕移动
         eventMask |= (1 << CGEventType.mouseMoved.rawValue)
         eventMask |= (1 << CGEventType.leftMouseDragged.rawValue)
@@ -122,24 +122,24 @@ class InputController {
 
         return Unmanaged.passUnretained(event)
     }
-    
+
     /// 处理鼠标移动事件，检测屏幕切换
     private func handleMouseEvent(event: CGEvent) {
         let mouseLocation = event.location
-        
+
         // 找到鼠标所在屏幕
         guard let newScreen = NSScreen.screens.first(where: { screen in
             NSMouseInRect(
                 NSPoint(x: mouseLocation.x, y: mouseLocation.y),
                 screen.frame,
-                false
+                false,
             )
         }) else {
             return
         }
-        
+
         let currentScreen = ConnectionCenter.shared.currentMouseScreen
-        
+
         // 检测屏幕是否变化
         if currentScreen == nil || currentScreen != newScreen {
             ConnectionCenter.shared.currentMouseScreen = newScreen
@@ -175,10 +175,8 @@ extension InputController {
         EventBus.shared.events
             .sink { [weak self] event in
                 switch event {
-                case .userConfigChanged(let authToken, let hotkeyConfigs):
-                    self?.handleConfigInitialized(
-                        authToken: authToken, hotkeyConfigs: hotkeyConfigs,
-                    )
+                case .userConfigUpdated(let authToken, let hotkeyConfigs):
+                    self?.handleConfigUpdated(authToken: authToken, hotkeyConfigs: hotkeyConfigs)
                 case .hotkeySettingStarted(let mode):
                     self?.handleHotkeySettingStarted(mode: mode)
                 case .hotkeySettingEnded(let mode, let hotkeyCombination):
@@ -201,7 +199,7 @@ extension InputController {
         Config.saveHotkeySetting(mode: mode, hotkeyCombination: hotkeyCombination)
     }
 
-    private func handleConfigInitialized(authToken: String, hotkeyConfigs: [[String: Any]]) {
+    private func handleConfigUpdated(authToken: String, hotkeyConfigs: [[String: Any]]) {
         Config.AUTH_TOKEN = authToken
 
         for config in hotkeyConfigs {
