@@ -27,6 +27,7 @@ enum MessageType: String, CaseIterable {
     case authTokenFailed = "auth_token_failed" // 新增：认证token失败消息（发送）
     case recordingTimeout = "recording_timeout" // 新增：录音超时消息（发送）
     case connectionSuccess = "connection_success" // 新增：连接成功消息（发送）
+    case recordingStarted = "recording_started" // 新增：录音已开始消息（接收）
 }
 
 struct WebSocketMessage {
@@ -76,6 +77,7 @@ enum NotificationMessageType: Equatable {
     case serverTimeout
     case recordingTimeout
     case authTokenFailed
+    case networkUnavailable
     case custom(title: String, content: String)
 
     var title: String {
@@ -86,6 +88,8 @@ enum NotificationMessageType: Equatable {
             "录音超时"
         case .authTokenFailed:
             "鉴权失败"
+        case .networkUnavailable:
+            "网络不可用"
         case .custom(let title, _):
             title
         }
@@ -96,9 +100,11 @@ enum NotificationMessageType: Equatable {
         case .serverTimeout:
             "服务器响应超时，请稍后重试"
         case .recordingTimeout:
-            "服务器未连接或缺失权限"
+            "服务器录音响应超时"
         case .authTokenFailed:
             "用户鉴权失败，请返回客户端重新登陆"
+        case .networkUnavailable:
+            "网络不可用，请检查网络连接"
         case .custom(_, let content):
             content
         }

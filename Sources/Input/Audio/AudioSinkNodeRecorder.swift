@@ -297,6 +297,12 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         recordState = .stopping
         audioEngine.stop()
 
+        // 从开始到结束 ws 连接不上
+        guard queueStartTime == nil else {
+            recordState = .idle
+            return
+        }
+
         // 刷新 Opus 编码器缓冲区, 发送所有剩余数据
         if let encoder = opusEncoder, let finalData = encoder.flush() {
             enqueueEncodedFrame(finalData)
@@ -452,6 +458,7 @@ extension AudioSinkNodeRecorder {
     private func checkAndHandleTimeout() {
         if queueStartTime == nil {
             queueStartTime = Date()
+            log.warning("Set queue start time")
         } else if let startTime = queueStartTime, Date().timeIntervalSince(startTime) >= 2.0 {
             log.error("Audio queue timeout: failed to establish connection within 2 seconds.")
             stopRecording()

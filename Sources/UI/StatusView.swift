@@ -101,9 +101,9 @@ struct StatusView: View {
             autoHide: false,
             onTap: {
                 if permissionState[.accessibility] != .granted {
-                    PermissionManager.shared.request(.accessibility) { _ in }
+                    PermissionService.shared.request(.accessibility) { _ in }
                 } else if permissionState[.microphone] != .granted {
-                    PermissionManager.shared.request(.microphone) { _ in }
+                    PermissionService.shared.request(.microphone) { _ in }
                 }
             },
         )
@@ -157,12 +157,12 @@ struct StatusView: View {
         case .notificationReceived(let notificationType):
             log.info("Receive notification: \(notificationType)")
             recording.state = .idle
-            
+
             var autoHide = true
-            if (notificationType == .authTokenFailed) {
+            if notificationType == .authTokenFailed || notificationType == .networkUnavailable {
                 autoHide = false
             }
-        
+
             showNotificationMessage(
                 title: notificationType.title, content: notificationType.content,
                 autoHide: autoHide

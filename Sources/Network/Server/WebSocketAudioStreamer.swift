@@ -24,6 +24,8 @@ class WebSocketAudioStreamer: @unchecked Sendable {
     // Server 超时配置
     private var responseTimeoutTimer: DispatchWorkItem?
     private let responseTimeoutDuration: TimeInterval = 10.0
+    private var recordingStartedTimeoutTimer: DispatchWorkItem?
+    private let recordingStartedTimeoutDuration: TimeInterval = 2.0
 
     init() {
         initializeMessageListener()
@@ -176,6 +178,7 @@ extension WebSocketAudioStreamer {
         }
 
         sendWebSocketMessage(type: .startRecording, data: data)
+        startRecordingStartedTimeoutTimer()
     }
 
     func sendStopRecording() {
@@ -209,14 +212,25 @@ extension WebSocketAudioStreamer {
     }
 
     func didReceiveMessage(_ json: [String: Any]) {
-        cancelResponseTimeoutTimer()
-
-        guard let data = json["data"] as? [String: Any],
-              let summary = data["summary"] as? String
+        guard let typeStr = json["type"] as? String,
+              let messageType = MessageType(rawValue: typeStr)
         else { return }
 
-        let serverTime = data["server_time"] as? Int
-        EventBus.shared.publish(.serverResultReceived(summary: summary, serverTime: serverTime))
+        switch messageType {
+        case .recordingStarted:
+            cancelRecordingStartedTimeoutTimer()
+            
+        case .recognitionSummary:
+            cancelResponseTimeoutTimer()
+            guard let data = json["data"] as? [String: Any],
+                  let summary = data["summary"] as? String
+            else { return }
+            let serverTime = data["server_time"] as? Int
+            EventBus.shared.publish(.serverResultReceived(summary: summary, serverTime: serverTime))
+            
+        default:
+            break
+        }
     }
 
     private func startResponseTimeoutTimer() {
@@ -237,5 +251,26 @@ extension WebSocketAudioStreamer {
     private func cancelResponseTimeoutTimer() {
         responseTimeoutTimer?.cancel()
         responseTimeoutTimer = nil
+    }
+
+    private func startRecordingStartedTimeoutTimer() {
+        cancelRecordingStartedTimeoutTimer()
+
+        let workItem = DispatchWorkItem { [weak self] in
+            guard let self else { return }
+            log.warning("Recording started response timed out after \(recordingStartedTimeoutDuration) seconds")
+            EventBus.shared.publish(.notificationReceived(.recordingTimeout))
+        }
+
+        recordingStartedTimeoutTimer = workItem
+        DispatchQueue.global().asyncAfter(
+            deadline: .now() + recordingStartedTimeoutDuration, execute: workItem)
+        log.debug("Started recording started timeout timer (\(recordingStartedTimeoutDuration)s)")
+    }
+
+    private func cancelRecordingStartedTimeoutTimer() {
+        log.debug("Cancel recording started timeout timer")
+        recordingStartedTimeoutTimer?.cancel()
+        recordingStartedTimeoutTimer = nil
     }
 }

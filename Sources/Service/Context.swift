@@ -41,6 +41,8 @@ class ContextService {
             return
         }
         
+        log.info("Paste Text To Active App: \(text)")
+        
         // 保存当前剪贴板内容
         let pasteboard = NSPasteboard.general
         let oldContents = pasteboard.string(forType: .string)

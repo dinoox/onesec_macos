@@ -14,11 +14,13 @@ class ConnectionCenter: @unchecked Sendable {
 
     private var wssClient: WebSocketAudioStreamer = .init()
     private var udsClient: UDSClient = .init()
-    private var permissionClient: PermissionManager = .shared
+    private var permissionClient: PermissionService = .shared
+    private var networkClient: NetworkService = .shared
 
     @Published var wssState: ConnState = .disconnected
     @Published var udsState: ConnState = .disconnected
     @Published var permissionsState: [PermissionType: PermissionStatus] = [:]
+    @Published var networkStatus: NetworkStatus = .unavailable
 
     @Published var currentMouseScreen: NSScreen? = nil
     @Published var isAuthed: Bool = true
@@ -37,6 +39,7 @@ class ConnectionCenter: @unchecked Sendable {
         bind(wssClient.$connectionState, to: \.wssState)
         bind(udsClient.$connectionState, to: \.udsState)
         bind(permissionClient.$permissionsState, to: \.permissionsState)
+        bind(networkClient.$networkStatus, to: \.networkStatus)
     }
 
     func canRecord() -> Bool {

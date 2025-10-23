@@ -23,8 +23,8 @@ enum PermissionStatus: Equatable {
     case notDetermined
 }
 
-final class PermissionManager: ObservableObject, @unchecked Sendable {
-    static let shared = PermissionManager()
+final class PermissionService: ObservableObject, @unchecked Sendable {
+    static let shared = PermissionService()
     
     @Published var microphonePermissionStatus: PermissionStatus = .notDetermined
     @Published var accessibilityPermissionStatus: PermissionStatus = .notDetermined

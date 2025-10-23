@@ -93,7 +93,9 @@ class InputController {
         }
 
         // 处理鼠标移动事件
-        if type == .mouseMoved || type == .leftMouseDragged || type == .rightMouseDragged || type == .otherMouseDragged {
+        if type == .mouseMoved || type == .leftMouseDragged || type == .rightMouseDragged
+            || type == .otherMouseDragged
+        {
             handleMouseEvent(event: event)
             return Unmanaged.passUnretained(event)
         }
@@ -128,13 +130,15 @@ class InputController {
         let mouseLocation = event.location
 
         // 找到鼠标所在屏幕
-        guard let newScreen = NSScreen.screens.first(where: { screen in
-            NSMouseInRect(
-                NSPoint(x: mouseLocation.x, y: mouseLocation.y),
-                screen.frame,
-                false,
-            )
-        }) else {
+        guard
+            let newScreen = NSScreen.screens.first(where: { screen in
+                NSMouseInRect(
+                    NSPoint(x: mouseLocation.x, y: mouseLocation.y),
+                    screen.frame,
+                    false,
+                )
+            })
+        else {
             return
         }
 
@@ -152,6 +156,12 @@ class InputController {
             EventBus.shared.publish(.notificationReceived(.authTokenFailed))
             return
         }
+
+        guard ConnectionCenter.shared.networkStatus == .available else {
+            EventBus.shared.publish(.notificationReceived(.networkUnavailable))
+            return
+        }
+
         let appInfo = ContextService.getAppInfo()
         audioRecorder.startRecording(
             appInfo: appInfo, focusContext: nil, focusElementInfo: nil, recordMode: mode,
