@@ -35,7 +35,7 @@ struct NotificationCard: View {
 
                     // 内容
                     Text(content)
-                        .font(.system(size: 11))
+                        .font(.system(size: 12))
                         .foregroundColor(.overlaySecondaryText)
                         .lineLimit(2)
                         .fixedSize(horizontal: false, vertical: true)

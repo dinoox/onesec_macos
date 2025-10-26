@@ -25,8 +25,8 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     private var audioEngine = AVAudioEngine()
     private var sinkNode: AVAudioSinkNode!
     private var converter: AVAudioConverter!
-    private var opusEncoder: OpusEncoder?
-    private var oggPacketizer: OpusOggStreamPacketizer?
+    private var opusEncoder: OpusEncoder!
+    private var oggPacketizer: OpusOggStreamPacketizer!
 
     private let opusFrameSamples = 160 // 10ms @ 16kHz
     private var opusFramesPerPacket = 20 // 默认聚合 200ms
@@ -57,30 +57,28 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         channels: 1,
         interleaved: true)!
 
-    private var frameDurationMilliseconds: Double {
-        (Double(opusFrameSamples) / targetFormat.sampleRate) * 1000.0
-    }
-
     init() {
         setupAudioEngine()
         setupAudioEventListener()
-        setupOpusEncoder()
+        setupOpusEncoderAndPacketizer()
     }
 
-    private func setupOpusEncoder() {
+    private func setupOpusEncoderAndPacketizer() {
         opusEncoder = OpusEncoder(
             format: targetFormat,
             application: .voip,
             frameSize: AVAudioFrameCount(opusFrameSamples))
-        rebuildOggPacketizer()
-    }
 
-    private func rebuildOggPacketizer() {
         oggPacketizer = OpusOggStreamPacketizer(
             sampleRate: Int(targetFormat.sampleRate),
             channelCount: Int(targetFormat.channelCount),
             opusFrameSamples: opusFrameSamples,
             framesPerPacket: opusFramesPerPacket)
+
+        guard opusEncoder != nil else {
+            log.error("unexpectedOpusEncoderInit")
+            return
+        }
     }
 
     private func setupAudioEngine() {
@@ -152,10 +150,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
             Double(inputBuffer.frameLength) * conversionRatio)
 
         // 创建输出缓冲区
-        guard
-            let outputBuffer = AVAudioPCMBuffer(
-                pcmFormat: targetFormat, frameCapacity: expectedOutputFrames)
-        else {
+        guard let outputBuffer = AVAudioPCMBuffer(pcmFormat: targetFormat, frameCapacity: expectedOutputFrames) else {
             return
         }
 
@@ -177,29 +172,16 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         let volume = calculateVolume(from: outputBuffer)
         EventBus.shared.publish(.volumeChanged(volume: volume))
 
-        // 使用 Opus 编码
-        if let encoder = opusEncoder {
-            let encodedFrames = encoder.encodeBuffer(outputBuffer)
-            totalRawBytesSent +=
-                Int(outputBuffer.frameLength)
-                * Int(outputBuffer.format.streamDescription.pointee.mBytesPerFrame)
+        // 使用 Opus 编码输入缓冲区
+        totalRawBytesSent +=
+            Int(outputBuffer.frameLength)
+            * Int(outputBuffer.format.streamDescription.pointee.mBytesPerFrame)
 
-            guard !encodedFrames.isEmpty else {
-                handleQueuedAudio()
-                return
+        for opusFrame in opusEncoder.encodeBuffer(outputBuffer) {
+            for packet in oggPacketizer.append(frame: opusFrame) {
+                audioQueue.append(packet)
             }
-
-            for opusFrame in encodedFrames {
-                enqueueEncodedFrame(opusFrame)
-            }
-        } else {
-            // 降级使用原始 PCM
-            log.warning("Opus encoder 初始化失败,使用原始 PCM")
-            let pcmData = convertBufferToData(outputBuffer)
-            audioQueue.append(pcmData)
-            totalRawBytesSent += pcmData.count
         }
-
         handleQueuedAudio()
     }
 
@@ -217,17 +199,6 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         return Data(bytes: audioBuffer, count: realDataCount)
     }
 
-    private func enqueueEncodedFrame(_ opusFrame: Data) {
-        guard let packetizer = oggPacketizer else {
-            audioQueue.append(opusFrame)
-            return
-        }
-
-        for packet in packetizer.append(frame: opusFrame) {
-            audioQueue.append(packet)
-        }
-    }
-
     private func flushPendingOggPackets(final: Bool) {
         guard let packetizer = oggPacketizer else { return }
         for packet in packetizer.flush(final: final) {
@@ -243,31 +214,6 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     }
 
     // MARK: - 录音处理
-
-    func configureOpusFramesPerPacket(_ count: Int) {
-        guard count > 0 else {
-            log.error("framesPerPacket must be positive")
-            return
-        }
-
-        if recordState == .recording {
-            log.warning(
-                "Updating frames per packet while recording; pending Ogg buffers will reset.")
-        }
-
-        opusFramesPerPacket = count
-        rebuildOggPacketizer()
-    }
-
-    func configureOpusPacketDuration(milliseconds: Int) {
-        guard milliseconds > 0 else {
-            log.error("packet duration must be positive")
-            return
-        }
-
-        let frames = max(1, Int(ceil(Double(milliseconds) / frameDurationMilliseconds)))
-        configureOpusFramesPerPacket(frames)
-    }
 
     func startRecording(
         appInfo: AppInfo? = nil, focusContext: FocusContext? = nil,
@@ -307,7 +253,9 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
 
         // 刷新 Opus 编码器缓冲区, 发送所有剩余数据
         if let encoder = opusEncoder, let finalData = encoder.flush() {
-            enqueueEncodedFrame(finalData)
+            for packet in oggPacketizer.append(frame: finalData) {
+                audioQueue.append(packet)
+            }
             log.info("📦 Opus encoder flushed final frame: \(finalData.count) bytes")
         }
 
@@ -349,9 +297,9 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         recordingInfo = nil
         queueStartTime = nil
 
-        // 重置 Opus 编码器缓冲区
-        opusEncoder?.reset()
-        rebuildOggPacketizer()
+        // 重置 Opus 打包器
+        opusEncoder.reset()
+        oggPacketizer.reset()
     }
 
     /// 计算音频缓冲区的音量 限制在 0-1 范围内
@@ -435,7 +383,6 @@ extension AudioSinkNodeRecorder {
         processAudioQueue()
     }
 
-    // TODO: 优化线程安全
     private func handleConnectionStateChange() {
         guard recordState == .recording, ConnectionCenter.shared.canRecord() else {
             return
