@@ -1,1 +1,1 @@
-<img width="2322" height="2152" alt="onesec drawio" src="https://github.com/user-attachments/assets/d913eccb-0c38-4522-af74-f30ddbc15fe8" />
+<img width="2322" height="2152" alt="onesec drawio" src="https://github.com/user-attachments/assets/eb3ca41f-c67d-4f54-9b78-ca8a9b666c19" />
