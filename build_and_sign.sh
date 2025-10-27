@@ -86,11 +86,9 @@ mkdir -p "${CONTENTS_DIR}/Resources"
 cp "${EXECUTABLE_PATH}" "${CONTENTS_DIR}/MacOS/"
 chmod +x "${CONTENTS_DIR}/MacOS/${APP_NAME}"
 
-# 复制资源
-[ -d "${PROJECT_ROOT}/Sources/Resources" ] && cp -R "${PROJECT_ROOT}/Sources/Resources/"* "${CONTENTS_DIR}/Resources/"
+# 复制资源 App Icon & Resource Bundle（包含音频等资源文件）
 [ -f "${PROJECT_ROOT}/AppIcon.icns" ] && cp "${PROJECT_ROOT}/AppIcon.icns" "${CONTENTS_DIR}/Resources/"
 
-# 复制 Resource Bundle（包含音频等资源文件）
 RESOURCE_BUNDLE="${BUILD_DIR}/arm64-apple-macosx/release/OnesecCore_OnesecCore.bundle"
 if [ -d "${RESOURCE_BUNDLE}" ]; then
     cp -R "${RESOURCE_BUNDLE}" "${CONTENTS_DIR}/Resources/"
@@ -212,6 +210,5 @@ echo_ok "签名验证通过"
 # ============= 完成 =============
 echo ""
 echo "${GREEN}✓ 完成！${NC}"
-echo "📦 ${APP_BUNDLE}"
 du -sh "${APP_BUNDLE}"
 

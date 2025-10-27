@@ -42,8 +42,8 @@ class StatusPanel: NSPanel {
             self?.resizeToFitContent()
         }
         self.contentView = hostingView
-        self.becomeKey()
-        
+        becomeKey()
+
         // 订阅屏幕切换事件
         setupScreenChangeListener()
     }
@@ -59,7 +59,7 @@ class StatusPanel: NSPanel {
 
     /// 处理屏幕切换事件
     private func handleScreenChanged(screen: NSScreen?) {
-        guard self.isVisible, let screen else { return }
+        guard isVisible, let screen else { return }
         updatePositionForScreen(screen)
     }
 
@@ -87,7 +87,7 @@ class StatusPanel: NSPanel {
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                     self.animator().alphaValue = 1.0
                 }
-            }
+            },
         )
     }
 
@@ -96,8 +96,7 @@ class StatusPanel: NSPanel {
     ///   - size: 窗口尺寸
     ///   - screen: 目标屏幕，如果不指定则使用主屏幕
     /// - Returns: 计算好的 frame，如果屏幕不可用则返回 nil
-    private func calculateBottomCenterFrame(for size: NSSize, on screen: NSScreen? = nil) -> NSRect?
-    {
+    private func calculateBottomCenterFrame(for size: NSSize, on screen: NSScreen? = nil) -> NSRect? {
         let targetScreen = screen ?? NSScreen.main
         guard let targetScreen else { return nil }
 
@@ -121,7 +120,7 @@ class StatusPanel: NSPanel {
         // 检查尺寸是否真的变化（允许 1 像素的误差）
         let sizeChanged =
             abs(newSize.width - lastContentSize.width) > 1.0
-            || abs(newSize.height - lastContentSize.height) > 1.0
+                || abs(newSize.height - lastContentSize.height) > 1.0
 
         guard sizeChanged else { return }
 
@@ -133,7 +132,8 @@ class StatusPanel: NSPanel {
         // 计算底部居中的 frame，使用当前屏幕
         guard
             let newFrame = calculateBottomCenterFrame(
-                for: frameSize, on: ConnectionCenter.shared.currentMouseScreen)
+                for: frameSize, on: ConnectionCenter.shared.currentMouseScreen,
+            )
         else { return }
 
         isResizing = true
@@ -153,7 +153,7 @@ class StatusPanelManager {
     private let panel: StatusPanel
 
     private init() {
-        panel = StatusPanel()
+        self.panel = StatusPanel()
         panel.alphaValue = 0
     }
 
@@ -162,7 +162,7 @@ class StatusPanelManager {
 
         // 淡入
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.3
+            context.duration = 0.4
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1.0
         }
@@ -172,7 +172,7 @@ class StatusPanelManager {
         // 淡出
         NSAnimationContext.runAnimationGroup(
             { context in
-                context.duration = 0.25
+                context.duration = 0.3
                 context.timingFunction = CAMediaTimingFunction(name: .easeIn)
                 panel.animator().alphaValue = 0
             },
@@ -183,7 +183,7 @@ class StatusPanelManager {
     }
 
     func getPanelFrame() -> NSRect {
-        return panel.frame
+        panel.frame
     }
 
     func makeKeyPanel(completion: (() -> Void)? = nil) {
