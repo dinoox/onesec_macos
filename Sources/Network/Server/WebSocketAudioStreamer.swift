@@ -162,7 +162,7 @@ extension WebSocketAudioStreamer {
     func sendStartRecording(
         mode: RecordMode = .normal,
     ) {
-        var data: [String: Any] = [
+        let data: [String: Any] = [
             "recognition_mode": mode.rawValue,
             "mode": Config.TEXT_PROCESS_MODE.rawValue,
         ]
@@ -187,7 +187,7 @@ extension WebSocketAudioStreamer {
     }
 
     func sendModeUpgrade(fromMode: RecordMode, toMode: RecordMode) {
-        var data: [String: Any] = [
+        let data: [String: Any] = [
             "from_mode": fromMode.rawValue,
             "to_mode": toMode.rawValue,
         ]
@@ -200,7 +200,7 @@ extension WebSocketAudioStreamer {
         focusContext: FocusContext,
         focusElementInfo: FocusElementInfo,
     ) {
-        var data: [String: Any] = [
+        let data: [String: Any] = [
             "app_info": appInfo.toJSON(),
             "focus_context": focusContext.toJSON(),
             "focus_element_info": focusElementInfo.toJSON(),

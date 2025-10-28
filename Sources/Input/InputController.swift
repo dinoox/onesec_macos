@@ -81,7 +81,9 @@ class InputController {
         return CGEventMask(eventMask)
     }
 
-    private func handleCGEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+    private func handleCGEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent)
+        -> Unmanaged<CGEvent>?
+    {
         guard type != .tapDisabledByTimeout else {
             log.warning("CGEventType tapDisabledByTimeout")
             return nil
@@ -96,7 +98,7 @@ class InputController {
         }
 
         guard event.getIntegerValueField(.keyboardEventAutorepeat) == 0 else {
-            return nil
+            return Unmanaged.passUnretained(event)
         }
 
         // 拦截快捷键的设置
@@ -106,9 +108,7 @@ class InputController {
         }
 
         // 正常处理按键监听
-        let evt = keyEventProcessor.handlekeyEvent(type: type, event: event)
-        log.debug("evt: \(evt)")
-        switch evt {
+        switch keyEventProcessor.handlekeyEvent(type: type, event: event) {
         case .startMatch(let mode): startRecording(mode: mode)
         case .endMatch: stopRecording()
         case .modeUpgrade(let from, let to): modeUpgrade(from: from, to: to)
@@ -123,7 +123,7 @@ class InputController {
     private func handleMouseEvent(event: CGEvent) {
         let mouseLocation = event.location
 
-        guard // 找到鼠标所在屏幕
+        guard  // 找到鼠标所在屏幕
             let newScreen = NSScreen.screens.first(where: { screen in
                 NSMouseInRect(
                     NSPoint(x: mouseLocation.x, y: mouseLocation.y),
@@ -157,7 +157,7 @@ class InputController {
 
         guard
             ConnectionCenter.shared.wssState == .connected
-            || ConnectionCenter.shared.wssState == .manualDisconnected
+                || ConnectionCenter.shared.wssState == .manualDisconnected
         else {
             EventBus.shared.publish(.notificationReceived(.networkUnavailable))
             return

@@ -34,8 +34,7 @@ final class PermissionService: ObservableObject, @unchecked Sendable {
     private var timer: Timer?
     
     private init() {
-        checkAllPermissions { [weak self] results in
-            log.info("Permission status: \(results)")
+        checkAllPermissions { [weak self] _ in
             self?.startMonitoring()
         }
     }

@@ -16,7 +16,7 @@ class OverlayController {
         let (hosting, contentSize) = createHostingViewAndGetSize(content: content)
 
         // 计算 overlay 的位置：StatusPanel 正上方，水平居中
-        let spacing: CGFloat = 4  // StatusPanel 和 overlay 之间的间距
+        let spacing: CGFloat = 4 // StatusPanel 和 overlay 之间的间距
         let overlayX = statusFrame.origin.x + (statusFrame.width - contentSize.width) / 2
         let overlayY = statusFrame.origin.y + statusFrame.height + spacing - shadowPadding
 
@@ -137,7 +137,7 @@ extension OverlayController {
             contentRect: NSRect(x: 0, y: 0, width: 0, height: 0),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
-            defer: false
+            defer: false,
         )
         tempPanel.contentView = hosting
         hosting.layoutSubtreeIfNeeded()

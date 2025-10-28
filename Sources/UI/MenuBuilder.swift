@@ -70,15 +70,6 @@ class MenuBuilder {
         menu.addItem(currentModeDescItem)
 
         menu.addItem(NSMenuItem.separator())
-
-        // 退出
-        menu.addItem(
-            NSMenuItem(
-                title: "退出",
-                action: #selector(NSApplication.terminate(_:)),
-                keyEquivalent: "q",
-            ))
-
         return menu
     }
 
