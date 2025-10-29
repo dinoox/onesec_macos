@@ -86,7 +86,7 @@ class InputController {
     {
         guard type != .tapDisabledByTimeout else {
             log.warning("CGEventType tapDisabledByTimeout")
-            return nil
+            return Unmanaged.passUnretained(event)
         }
 
         // 处理鼠标移动事件
@@ -112,7 +112,7 @@ class InputController {
         case .startMatch(let mode): startRecording(mode: mode)
         case .endMatch: stopRecording()
         case .modeUpgrade(let from, let to): modeUpgrade(from: from, to: to)
-        case .stillMatching, .notMatching:
+        case .throttled, .stillMatching, .notMatching:
             break
         }
 
