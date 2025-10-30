@@ -235,7 +235,7 @@ extension WebSocketAudioStreamer {
             }
             // 将 CGImage 转换为 JPEG 格式并压缩
             let bitmapRep = NSBitmapImageRep(cgImage: screenshot)
-            guard let jpegData = bitmapRep.representation(using: .jpeg, properties: [.compressionFactor: 0.7]) else {
+            guard let jpegData = bitmapRep.representation(using: .jpeg, properties: [.compressionFactor: 0.5]) else {
                 log.error("cant compress screenshot")
                 return
             }

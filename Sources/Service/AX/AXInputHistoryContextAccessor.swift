@@ -80,8 +80,7 @@ class AXInputHistoryContextAccessor {
                     let cleaned = text.cleaned
                     let len = cleaned.count
 
-                    // 允许稍微超出50字符缓冲, 避免频繁检查, 最后统一截断
-                    if len > 0, charCount + len <= maxChars + 50 {
+                    if len > 0, charCount + len <= maxChars {
                         texts.append(cleaned)
                         charCount += len
                     }
