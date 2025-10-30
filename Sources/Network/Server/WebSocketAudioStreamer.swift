@@ -35,7 +35,7 @@ class WebSocketAudioStreamer: @unchecked Sendable {
     // 控制空闲时间超过 30 分钟后, 断开连接
     private var idleTimeoutTask: Task<Void, Never>?
     private let idleTimeoutDuration: TimeInterval = 30 * 60
-    
+
     // 上下文发送任务
     // 确保 StopRecording 时, 上下文已经发送完毕
     private var contextTask: Task<Void, Never>?
@@ -226,7 +226,7 @@ extension WebSocketAudioStreamer {
 
     func handleServerResourceRequested(type: String) {
         var data: [String: Any] = [
-            "type": type,
+            "resource_type": type,
         ]
 
         if type == "screenshot" {
@@ -240,6 +240,10 @@ extension WebSocketAudioStreamer {
                 return
             }
             data["image"] = jpegData.base64EncodedString()
+        }
+
+        if type == "full_context" {
+            data["text"] = ContextService.getInputContent(contextLength: 0) ?? ""
         }
 
         sendWebSocketMessage(type: .resourceRequested, data: data)
@@ -266,7 +270,7 @@ extension WebSocketAudioStreamer {
 
         case .resourceRequested:
             guard let data = json["data"] as? [String: Any],
-                  let type = data["type"] as? String else { return }
+                  let type = data["resource_type"] as? String else { return }
             handleServerResourceRequested(type: type)
 
         case .recognitionSummary:

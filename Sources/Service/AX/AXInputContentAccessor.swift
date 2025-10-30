@@ -20,6 +20,10 @@ class AXInputContentAccessor {
             return nil
         }
 
+        if contextLength <= 0 {
+            return getFullContent(element: element)
+        }
+
         guard let rangeValue: AXValue = AXElementAccessor.getAttributeValue(
             element: element, attribute: kAXSelectedTextRangeAttribute
         ) else {
@@ -50,23 +54,15 @@ class AXInputContentAccessor {
             return text.cleaned
         }
 
-        // 降级: 获取全文并用 UTF8 视图快速切片
+        return getFullContent(element: element)
+    }
+
+    private static func getFullContent(element: AXUIElement) -> String? {
         guard let fullText: String = AXElementAccessor.getAttributeValue(
             element: element, attribute: kAXValueAttribute
         ), !fullText.isEmpty else {
             return nil
         }
-
-        // 使用 UTF16 视图进行 O(1) 的索引操作
-        let utf16 = fullText.utf16
-        let safeStart = min(start, utf16.count)
-        let safeEnd = min(start + length, utf16.count)
-
-        guard safeStart < safeEnd else { return nil }
-
-        let startIdx = utf16.index(utf16.startIndex, offsetBy: safeStart)
-        let endIdx = utf16.index(utf16.startIndex, offsetBy: safeEnd)
-
-        return String(utf16[startIdx ..< endIdx])?.cleaned
+        return fullText.cleaned
     }
 }
