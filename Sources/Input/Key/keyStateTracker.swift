@@ -36,8 +36,8 @@ class KeyStateTracker {
     private var lastStartMatchTime: TimeInterval = 0
 
     private var keyConfigs: [KeyConfig] = [
-        KeyConfig(keyCodes: Config.NORMAL_KEY_CODES, description: "normal", mode: .normal),
-        KeyConfig(keyCodes: Config.COMMAND_KEY_CODES, description: "command", mode: .command),
+        KeyConfig(keyCodes: Config.shared.NORMAL_KEY_CODES, description: "normal", mode: .normal),
+        KeyConfig(keyCodes: Config.shared.COMMAND_KEY_CODES, description: "command", mode: .command),
     ]
 
     init() {
@@ -211,8 +211,8 @@ class KeyStateTracker {
 
     func reloadKeyConfigs() {
         keyConfigs = [
-            KeyConfig(keyCodes: Config.NORMAL_KEY_CODES, description: "normal", mode: .normal),
-            KeyConfig(keyCodes: Config.COMMAND_KEY_CODES, description: "command", mode: .command),
+            KeyConfig(keyCodes: Config.shared.NORMAL_KEY_CODES, description: "normal", mode: .normal),
+            KeyConfig(keyCodes: Config.shared.COMMAND_KEY_CODES, description: "command", mode: .command),
         ]
         log.info("✅ KeyStateTracker reload key configs")
     }

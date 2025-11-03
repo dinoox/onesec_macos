@@ -1,4 +1,5 @@
 import SwiftUI
+import Combine
 
 struct RecordingState {
     var volume: CGFloat = 0 // 音量值 (0-1)
@@ -22,7 +23,7 @@ struct StatusIndicator: View {
     private let overlay = OverlayController.shared
     @State private var isHovered: Bool = false
     @State private var tooltipPanelId: UUID?
-    @State private var isTranslateMode: Bool = false
+    @State private var isTranslateMode: Bool = Config.shared.TEXT_PROCESS_MODE == .translate
 
     private var modeColor: Color {
         mode == .normal ? auroraGreen : starlightYellow
@@ -158,7 +159,7 @@ struct StatusIndicator: View {
             isHovered = hovering
 
             if hovering {
-                let uuid = overlay.showOverlay {
+                let uuid = overlay.showOverlay { _ in
                     Text("按住 fn 开始语音输入 或  点击进行设置")
                         .font(.system(size: 12))
                         .foregroundColor(.overlayText)
@@ -181,16 +182,8 @@ struct StatusIndicator: View {
                     tooltipPanelId = nil
                 }
             }
-        }.onReceive(
-            EventBus.shared.events
-                .receive(on: DispatchQueue.main),
-        ) { event in
-            handleEvent(event)
         }
-    }
-
-    private func handleEvent(_ event: AppEvent) {
-        if case let .textProcessModeChanged(mode) = event {
+        .onReceive(Config.shared.$TEXT_PROCESS_MODE) { mode in
             isTranslateMode = mode == .translate
         }
     }

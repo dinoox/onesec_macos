@@ -62,10 +62,10 @@ class WebSocketAudioStreamer: @unchecked Sendable {
         }
         connectionState = .connecting
 
-        let serverURL = URL(string: "wss://\(Config.SERVER)")!
+        let serverURL = URL(string: "wss://\(Config.shared.SERVER)")!
 
         var request = URLRequest(url: serverURL, timeoutInterval: 60)
-        request.setValue("Bearer \(Config.AUTH_TOKEN)", forHTTPHeaderField: "Authorization")
+        request.setValue("Bearer \(Config.shared.AUTH_TOKEN)", forHTTPHeaderField: "Authorization")
 
         // 创建 Starscream WebSocket
         // 宽松的SSL配置来支持自签名证书
@@ -75,7 +75,7 @@ class WebSocketAudioStreamer: @unchecked Sendable {
 
         scheduleConnectingCheck()
 
-        log.info("WebSocket start connect with token \(Config.AUTH_TOKEN) \(serverURL)")
+        log.info("WebSocket start connect with token \(Config.shared.AUTH_TOKEN) \(serverURL)")
     }
 
     func scheduleReconnect(reason: String) {
@@ -166,7 +166,7 @@ extension WebSocketAudioStreamer {
     ) {
         let data: [String: Any] = [
             "recognition_mode": mode.rawValue,
-            "mode": Config.TEXT_PROCESS_MODE.rawValue,
+            "mode": Config.shared.TEXT_PROCESS_MODE.rawValue,
         ]
 
         sendWebSocketMessage(type: .startRecording, data: data)

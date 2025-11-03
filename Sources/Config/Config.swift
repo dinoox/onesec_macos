@@ -5,16 +5,22 @@
 //  Created by 王晓雨 on 2025/10/14.
 //
 
-actor Config {
-    static var UDS_CHANNEL: String = ""
-    static var SERVER: String = ""
-    static var AUTH_TOKEN: String = ""
-    static var DEBUG_MODE: Bool = true
-    static var NORMAL_KEY_CODES: [Int64] = [63, 49] // 默认 Fn
-    static var COMMAND_KEY_CODES: [Int64] = [63, 55] // 默认 Fn+LCmd
-    static var TEXT_PROCESS_MODE: TextProcessMode = .auto // 默认自动
+import Combine
 
-    static func saveHotkeySetting(mode: RecordMode, hotkeyCombination: [String]) {
+class Config: ObservableObject {
+    static let shared = Config()
+    
+    @Published var UDS_CHANNEL: String = ""
+    @Published var SERVER: String = ""
+    @Published var AUTH_TOKEN: String = ""
+    @Published var DEBUG_MODE: Bool = true
+    @Published var NORMAL_KEY_CODES: [Int64] = [63, 49] // 默认 Fn
+    @Published var COMMAND_KEY_CODES: [Int64] = [63, 55] // 默认 Fn+LCmd
+    @Published var TEXT_PROCESS_MODE: TextProcessMode = .auto // 默认自动
+    
+    private init() {}
+
+    func saveHotkeySetting(mode: RecordMode, hotkeyCombination: [String]) {
         let keyCodes = hotkeyCombination.compactMap { KeyMapper.stringToKeyCodeMap[$0] }
         if mode == .normal {
             NORMAL_KEY_CODES = keyCodes
@@ -23,11 +29,6 @@ actor Config {
         }
 
         log.info("Hotkey updated for mode: \(mode), keyCodes: \(keyCodes)")
-    }
-
-    static func setTextProcessMode(_ mode: TextProcessMode) {
-        TEXT_PROCESS_MODE = mode
-        log.info("Text process mode updated to: \(mode.rawValue)")
     }
 }
 

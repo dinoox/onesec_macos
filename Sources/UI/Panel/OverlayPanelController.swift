@@ -23,9 +23,11 @@ class OverlayController {
     }
 
     @discardableResult
-    func showOverlay(@ViewBuilder content: () -> some View) -> UUID {
+    func showOverlay(@ViewBuilder content: (_ panelId: UUID) -> some View) -> UUID {
         let statusFrame = StatusPanelManager.shared.getPanelFrame()
-        let (hosting, contentSize) = createHostingViewAndGetSize(content: content)
+
+        let uuid = UUID()
+        let (hosting, contentSize) = createHostingViewAndGetSize(content: { content(uuid) })
 
         // 计算 overlay 的位置：StatusPanel 正上方，水平居中 (36 为 StatusPanel 的高度)
         let spacing: CGFloat = 4 // StatusPanel 和 overlay 之间的间距
@@ -44,9 +46,7 @@ class OverlayController {
         panel.animations = ["alphaValue": createSpringFadeInAnimation()]
         panel.animator().alphaValue = 1.0
 
-        let uuid = UUID()
         panels[uuid] = panel
-
         return uuid
     }
 
@@ -88,7 +88,6 @@ class OverlayController {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hasShadow = false
-        panel.isMovableByWindowBackground = true
         panel.contentView = hosting
         panel.becomeKey()
         panel.makeKeyAndOrderFront(nil)
@@ -176,12 +175,12 @@ class OverlayController {
         )
 
         setupPanel(panel, hosting: hosting)
+        panel.isMovableByWindowBackground = true
         panel.alphaValue = 0.0
         panel.animations = ["alphaValue": createSpringFadeInAnimation()]
         panel.animator().alphaValue = 1.0
 
         panels[uuid] = panel
-
         return uuid
     }
 

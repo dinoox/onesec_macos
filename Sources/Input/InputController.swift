@@ -1,5 +1,5 @@
 //
-//  VoiceInputManager.swift
+//  InputController.swift
 //  OnesecCore
 //
 //  Created by 王晓雨 on 2025/10/15.
@@ -81,7 +81,7 @@ class InputController {
         return CGEventMask(eventMask)
     }
 
-    private func handleCGEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent)
+    private func handleCGEvent(proxy _: CGEventTapProxy, type: CGEventType, event: CGEvent)
         -> Unmanaged<CGEvent>?
     {
         guard type != .tapDisabledByTimeout else {
@@ -109,9 +109,9 @@ class InputController {
 
         // 正常处理按键监听
         switch keyEventProcessor.handlekeyEvent(type: type, event: event) {
-        case .startMatch(let mode): startRecording(mode: mode)
+        case let .startMatch(mode): startRecording(mode: mode)
         case .endMatch: stopRecording()
-        case .modeUpgrade(let from, let to): modeUpgrade(from: from, to: to)
+        case let .modeUpgrade(from, to): modeUpgrade(from: from, to: to)
         case .throttled, .stillMatching, .notMatching:
             break
         }
@@ -123,7 +123,7 @@ class InputController {
     private func handleMouseEvent(event: CGEvent) {
         let mouseLocation = event.location
 
-        guard  // 找到鼠标所在屏幕
+        guard // 找到鼠标所在屏幕
             let newScreen = NSScreen.screens.first(where: { screen in
                 NSMouseInRect(
                     NSPoint(x: mouseLocation.x, y: mouseLocation.y),
@@ -157,7 +157,7 @@ class InputController {
 
         guard
             ConnectionCenter.shared.wssState == .connected
-                || ConnectionCenter.shared.wssState == .manualDisconnected
+            || ConnectionCenter.shared.wssState == .manualDisconnected
         else {
             EventBus.shared.publish(.notificationReceived(.networkUnavailable))
             return
@@ -166,7 +166,7 @@ class InputController {
         if ConnectionCenter.shared.wssState == .manualDisconnected {
             ConnectionCenter.shared.connectWss()
         }
-        
+
         audioRecorder.startRecording(mode: mode)
     }
 
@@ -187,9 +187,9 @@ extension InputController {
         EventBus.shared.events
             .sink { [weak self] event in
                 switch event {
-                case .hotkeySettingStarted(let mode):
+                case let .hotkeySettingStarted(mode):
                     self?.handleHotkeySettingStarted(mode: mode)
-                case .hotkeySettingEnded(let mode, let hotkeyCombination):
+                case let .hotkeySettingEnded(mode, hotkeyCombination):
                     self?.handleHotkeySettingEnded(mode: mode, hotkeyCombination: hotkeyCombination)
                 default:
                     break
@@ -204,6 +204,6 @@ extension InputController {
 
     private func handleHotkeySettingEnded(mode: RecordMode, hotkeyCombination: [String]) {
         keyEventProcessor.endHotkeySetting()
-        Config.saveHotkeySetting(mode: mode, hotkeyCombination: hotkeyCombination)
+        Config.shared.saveHotkeySetting(mode: mode, hotkeyCombination: hotkeyCombination)
     }
 }

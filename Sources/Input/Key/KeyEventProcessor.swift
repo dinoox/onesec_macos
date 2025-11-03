@@ -64,16 +64,16 @@ class KeyEventProcessor {
             let otherKeyCodes: [Int64]
             
             if hotkeySettingMode == .normal {
-                otherKeyCodes = Config.COMMAND_KEY_CODES.sorted()
+                otherKeyCodes = Config.shared.COMMAND_KEY_CODES.sorted()
             } else {
-                otherKeyCodes = Config.NORMAL_KEY_CODES.sorted()
+                otherKeyCodes = Config.shared.NORMAL_KEY_CODES.sorted()
             }
             
             let isConflict = newKeyCodes == otherKeyCodes
             
             // 只有不冲突时才保存
             if !isConflict {
-                Config.saveHotkeySetting(mode: hotkeySettingMode, hotkeyCombination: hotkeyCombination)
+                Config.shared.saveHotkeySetting(mode: hotkeySettingMode, hotkeyCombination: hotkeyCombination)
             }
             
             EventBus.shared.publish(.hotkeySettingResulted(mode: hotkeySettingMode, hotkeyCombination: hotkeyCombination, isConflict: isConflict))

@@ -7,7 +7,6 @@ struct ShortcutSettingsState {
     var opacity: Double = 0
 }
 
-
 struct KeyCapView: View {
     let keyName: String
 
@@ -122,12 +121,12 @@ struct ShortcutInputField: View {
         EventBus.shared.events.receive(on: DispatchQueue.main)
             .sink { event in
                 switch event {
-                case .hotkeySettingUpdated(let eventMode, let combination):
+                case let .hotkeySettingUpdated(eventMode, combination):
                     guard eventMode == mode else { return }
                     let codes = combination.compactMap { KeyMapper.stringToKeyCodeMap[$0] }
                     keyCodes = codes
 
-                case .hotkeySettingResulted(let eventMode, _, _):
+                case let .hotkeySettingResulted(eventMode, _, _):
                     guard eventMode == mode else { return }
                     currentEditingMode = nil
 
@@ -152,7 +151,6 @@ struct ShortcutSettingsCard: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 标题栏
             HStack {
                 Text("快捷键设置")
                     .font(.system(size: 14, weight: .semibold))
@@ -160,12 +158,10 @@ struct ShortcutSettingsCard: View {
 
                 Spacer()
 
-                // 关闭按钮
                 Button(action: onClose) {
-                    Image.systemSymbol("xmark.circle.fill")
-                        .font(.system(size: 16))
-                        .foregroundColor(
-                            isCloseHovered ? destructiveRed : Color.gray.opacity(0.5))
+                    Image.systemSymbol("xmark")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(isCloseHovered ? .overlayText : .overlaySecondaryText)
                 }
                 .buttonStyle(.plain)
                 .animation(.easeInOut(duration: 0.2), value: isCloseHovered)
@@ -183,7 +179,6 @@ struct ShortcutSettingsCard: View {
             .padding(.bottom, 6)
 
             VStack(alignment: .leading, spacing: 14) {
-                // 普通模式
                 VStack(alignment: .leading, spacing: 8) {
                     Text("普通模式")
                         .font(.system(size: 12, weight: .medium))
@@ -197,7 +192,6 @@ struct ShortcutSettingsCard: View {
                     )
                 }
 
-                // 命令模式
                 VStack(alignment: .leading, spacing: 8) {
                     Text("命令模式")
                         .font(.system(size: 12, weight: .medium))
@@ -242,19 +236,18 @@ struct ShortcutSettingsCard: View {
             cancelEditing()
         }
         .onAppear {
-            // 加载快捷键配置
-            normalKeyCodes = Config.NORMAL_KEY_CODES
-            commandKeyCodes = Config.COMMAND_KEY_CODES
+            normalKeyCodes = Config.shared.NORMAL_KEY_CODES
+            commandKeyCodes = Config.shared.COMMAND_KEY_CODES
 
-            // 监听快捷键设置结果事件
             EventBus.shared.events
                 .receive(on: DispatchQueue.main)
                 .sink { [self] event in
-                    if case .hotkeySettingResulted(let mode, let combination, let isConflict) =
+                    if case let .hotkeySettingResulted(mode, combination, isConflict) =
                         event
                     {
                         handleHotkeySettingResulted(
-                            mode: mode, combination: combination, isConflict: isConflict)
+                            mode: mode, combination: combination, isConflict: isConflict
+                        )
                     }
                 }
                 .store(in: &cancellables)
@@ -263,7 +256,7 @@ struct ShortcutSettingsCard: View {
 
     private func cancelEditing() {
         if let mode = currentEditingMode {
-            let originalCodes = mode == .normal ? Config.NORMAL_KEY_CODES : Config.COMMAND_KEY_CODES
+            let originalCodes = mode == .normal ? Config.shared.NORMAL_KEY_CODES : Config.shared.COMMAND_KEY_CODES
             let combination = originalCodes.map { KeyMapper.keyCodeToString($0) }
             EventBus.shared.publish(
                 .hotkeySettingResulted(mode: mode, hotkeyCombination: combination))
@@ -278,8 +271,7 @@ struct ShortcutSettingsCard: View {
             combination.compactMap { KeyMapper.stringToKeyCodeMap[$0] })
 
         if isConflict {
-            // 冲突：恢复原来的快捷键
-            let originalCodes = mode == .normal ? Config.NORMAL_KEY_CODES : Config.COMMAND_KEY_CODES
+            let originalCodes = mode == .normal ? Config.shared.NORMAL_KEY_CODES : Config.shared.COMMAND_KEY_CODES
 
             if mode == .normal {
                 normalKeyCodes = originalCodes
@@ -298,7 +290,6 @@ struct ShortcutSettingsCard: View {
                 }
             }
         } else {
-            // 无冲突：更新配置
             if mode == .normal {
                 normalKeyCodes = newKeyCodes
                 normalConflictError = nil

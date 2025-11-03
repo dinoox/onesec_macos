@@ -1,12 +1,12 @@
-import SwiftUI
 import AppKit
+import SwiftUI
 
 struct ContentCard: View {
     let panelId: UUID
     let title: String
     let content: String
     let onTap: (() -> Void)? = nil
-    
+
     private let autoCloseDuration: Int = 12
     private let cardWidth: CGFloat = 240
 
@@ -67,11 +67,22 @@ struct ContentCard: View {
                 }
 
                 if !isContentCollapsed {
-                    Text(content)
-                        .font(.system(size: 12, weight: .regular))
-                        .foregroundColor(.overlaySecondaryText)
-                        .lineLimit(20)
-                        .fixedSize(horizontal: false, vertical: true)
+                    if #available(macOS 12.0, *) {
+                        Text(content)
+                            .font(.system(size: 12.5, weight: .regular))
+                            .foregroundColor(.overlaySecondaryText)
+                            .lineLimit(20)
+                            .lineSpacing(3.8)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .textSelection(.enabled)
+                    } else {
+                        Text(content)
+                            .font(.system(size: 12.5, weight: .regular))
+                            .foregroundColor(.overlaySecondaryText)
+                            .lineLimit(20)
+                            .lineSpacing(3.8)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
 
                     HStack {
                         Spacer()
@@ -102,12 +113,12 @@ struct ContentCard: View {
                         Text("这条消息将在 ")
                             .font(.system(size: 10))
                             .foregroundColor(Color.overlaySecondaryText)
-                        
+
                         Text("\(remainingSeconds)")
                             .font(.system(size: 10, design: .monospaced))
                             .fontWeight(.bold)
                             .foregroundColor(Color.overlaySecondaryText)
-                        
+
                         Text(" 秒后自动关闭，")
                             .font(.system(size: 10))
                             .foregroundColor(Color.overlaySecondaryText)
@@ -149,7 +160,7 @@ struct ContentCard: View {
             RoundedRectangle(cornerRadius: 12)
                 .strokeBorder(Color.overlayBorder, lineWidth: 1.2)
         )
-        .shadow(color: .overlayBackground.opacity(0.3), radius: 8, x: 0, y: 0)
+        .shadow(color: .overlayBackground.opacity(0.3), radius: 6, x: 0, y: 0)
         .onTapGesture { onTap?() }
         .onAppear { startAutoCloseTimer() }
         .onDisappear { stopAutoCloseTimer() }
@@ -177,11 +188,11 @@ struct ContentCard: View {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
         pasteboard.setString(content, forType: .string)
-        
+
         withAnimation {
             isContentCopied = true
         }
-        
+
         Task {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             withAnimation {
@@ -192,7 +203,7 @@ struct ContentCard: View {
 
     private func startAutoCloseTimer() {
         timerTask = Task { @MainActor in
-            for second in (0...autoCloseDuration).reversed() {
+            for second in (0 ... autoCloseDuration).reversed() {
                 guard !Task.isCancelled else { return }
                 remainingSeconds = second
                 if second == 0 {

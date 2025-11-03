@@ -58,7 +58,7 @@ final class UDSClient: @unchecked Sendable {
     }
 
     func connect(isRetry: Bool = false) {
-        let udsChannel = Config.UDS_CHANNEL
+        let udsChannel = Config.shared.UDS_CHANNEL
 
         guard connectionState != .connecting else {
             log.warning("detect connecting... return")
@@ -194,8 +194,8 @@ extension UDSClient {
             return
         }
 
-        Config.AUTH_TOKEN = authToken
-        ConnectionCenter.shared.isAuthed = JWTValidator.isValid(Config.AUTH_TOKEN)
+        Config.shared.AUTH_TOKEN = authToken
+        ConnectionCenter.shared.isAuthed = JWTValidator.isValid(Config.shared.AUTH_TOKEN)
         log.info("ConnectionCenter.shared.isAuthed \(ConnectionCenter.shared.isAuthed)")
 
         for config in hotkeyConfigs {
@@ -205,7 +205,7 @@ extension UDSClient {
                 continue
             }
 
-            Config.saveHotkeySetting(
+            Config.shared.saveHotkeySetting(
                 mode: mode == "normal" ? .normal : .command, hotkeyCombination: hotkeyCombination
             )
         }

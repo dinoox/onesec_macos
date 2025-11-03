@@ -41,7 +41,7 @@ class MenuBuilder {
             )
             menuItem.target = self
             menuItem.tag = tag
-            menuItem.state = Config.TEXT_PROCESS_MODE == mode ? .on : .off
+            menuItem.state = Config.shared.TEXT_PROCESS_MODE == mode ? .on : .off
             textModeSubmenu.addItem(menuItem)
 
             // 描述文字
@@ -60,9 +60,9 @@ class MenuBuilder {
         textModeItem.submenu = textModeSubmenu
         menu.addItem(textModeItem)
 
-        // 显示当前选择的风格
+        // 风格切换
         let currentModeDescItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
-        let currentModeText = Config.TEXT_PROCESS_MODE == .translate ? "无识别风格" : "\(Config.TEXT_PROCESS_MODE.displayName) \(Config.TEXT_PROCESS_MODE.description)"
+        let currentModeText = Config.shared.TEXT_PROCESS_MODE == .translate ? "无识别风格" : "\(Config.shared.TEXT_PROCESS_MODE.displayName) \(Config.shared.TEXT_PROCESS_MODE.description)"
         let currentModeAttr = NSMutableAttributedString(string: currentModeText)
         currentModeDescItem.attributedTitle = currentModeAttr
         currentModeDescItem.isEnabled = false
@@ -70,14 +70,14 @@ class MenuBuilder {
 
         menu.addItem(NSMenuItem.separator())
 
-        // 翻译模式开关
+        // 翻译模式
         let translateItem = NSMenuItem(
             title: "翻译模式",
             action: #selector(handleTranslateModeToggle),
             keyEquivalent: "",
         )
         translateItem.target = self
-        translateItem.state = Config.TEXT_PROCESS_MODE == .translate ? .on : .off
+        translateItem.state = Config.shared.TEXT_PROCESS_MODE == .translate ? .on : .off
         menu.addItem(translateItem)
 
         menu.addItem(NSMenuItem.separator())
@@ -91,28 +91,22 @@ class MenuBuilder {
     @objc private func handleTextModeChange(_ sender: NSMenuItem) {
         let modes: [TextProcessMode] = [.auto, .format]
         guard sender.tag < modes.count else { return }
-
-        let selectedMode = modes[sender.tag]
-        Config.setTextProcessMode(selectedMode)
+        Config.shared.TEXT_PROCESS_MODE = modes[sender.tag]
     }
 
     @objc private func handleTranslateModeToggle() {
-        if Config.TEXT_PROCESS_MODE == .translate {
-            Config.TEXT_PROCESS_MODE = .auto
+        if Config.shared.TEXT_PROCESS_MODE == .translate {
+            Config.shared.TEXT_PROCESS_MODE = .auto
         } else {
-            Config.TEXT_PROCESS_MODE = .translate
+            Config.shared.TEXT_PROCESS_MODE = .translate
         }
-
-        EventBus.shared.publish(.textProcessModeChanged(mode: Config.TEXT_PROCESS_MODE))
     }
 
     func showMenu(in view: NSView) {
-        let menu = buildMenu()
-
         // 使用当前事件来显示菜单，这样菜单会自动出现在点击位置附近
         // 这是 macOS 推荐的方式，会自动处理菜单定位和显示动画
         if let event = NSApp.currentEvent {
-            NSMenu.popUpContextMenu(menu, with: event, for: view)
+            NSMenu.popUpContextMenu(buildMenu(), with: event, for: view)
         }
     }
 }

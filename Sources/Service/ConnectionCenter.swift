@@ -25,7 +25,7 @@ class ConnectionCenter: @unchecked Sendable {
     @Published var audioRecorderState: RecordState = .idle
 
     @Published var currentMouseScreen: NSScreen? = nil
-    @Published var isAuthed: Bool = JWTValidator.isValid(Config.AUTH_TOKEN)
+    @Published var isAuthed: Bool = JWTValidator.isValid(Config.shared.AUTH_TOKEN)
 
     private var cancellables = Set<AnyCancellable>()
 

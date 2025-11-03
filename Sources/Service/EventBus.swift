@@ -27,8 +27,6 @@ enum AppEvent {
     //
     case mouseScreenChanged(screen: NSScreen)
     case pastedTextModified(original: String, modified: String, interactionID: String)
-    //
-    case textProcessModeChanged(mode: TextProcessMode)
 }
 
 class EventBus: @unchecked Sendable {

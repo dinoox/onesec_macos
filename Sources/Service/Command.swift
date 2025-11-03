@@ -31,12 +31,12 @@ struct CommandParser: ParsableCommand {
             throw ValidationError("Invalid Server: \(server)")
         }
 
-        Config.UDS_CHANNEL = udsChannel
-        Config.SERVER = server
-        Config.AUTH_TOKEN = authToken
-        Config.DEBUG_MODE = debugMode
-        Config.NORMAL_KEY_CODES = try parseKeys(normalKeys, name: "普通模式按键")
-        Config.COMMAND_KEY_CODES = try parseKeys(commandKeys, name: "命令模式按键")
+        Config.shared.UDS_CHANNEL = udsChannel
+        Config.shared.SERVER = server
+        Config.shared.AUTH_TOKEN = authToken
+        Config.shared.DEBUG_MODE = debugMode
+        Config.shared.NORMAL_KEY_CODES = try parseKeys(normalKeys, name: "普通模式按键")
+        Config.shared.COMMAND_KEY_CODES = try parseKeys(commandKeys, name: "命令模式按键")
 
         log.info("Hotkey inited with normal: \(normalKeys), command: \(commandKeys)")
     }

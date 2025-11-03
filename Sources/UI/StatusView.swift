@@ -27,7 +27,7 @@ struct StatusView: View {
             overlay.hideOverlay(uuid: panelId)
             settingsPanelId = nil
         } else {
-            let uuid = overlay.showOverlay {
+            let uuid = overlay.showOverlay { _ in
                 ShortcutSettingsCard(onClose: {
                     if let panelId = settingsPanelId {
                         overlay.hideOverlay(uuid: panelId)
@@ -46,7 +46,7 @@ struct StatusView: View {
             overlay.hideOverlay(uuid: panelId)
         }
 
-        let uuid = overlay.showOverlay {
+        let uuid = overlay.showOverlay { _ in
             NotificationCard(
                 title: title,
                 content: content,
@@ -202,11 +202,13 @@ struct StatusView: View {
                             )
                         }
                     default:
-                        showNotificationMessage(
-                            title: "识别结果",
-                            content: summary,
-                            autoHide: false
-                        )
+                        overlay.showOverlay { panelId in
+                            ContentCard(
+                                panelId: panelId,
+                                title: "识别结果",
+                                content: summary
+                            )
+                        }
                     }
                     return
                 }
