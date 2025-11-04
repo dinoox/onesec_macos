@@ -38,6 +38,7 @@ struct ContentCard: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 0) {
+            // 顶部标题栏
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
                     Text(title)
@@ -65,7 +66,7 @@ struct ContentCard: View {
                             .font(.system(size: 12, weight: .semibold))
                             .padding(.trailing, 2)
                             .foregroundColor(isCloseHovered ? .overlayText : .overlaySecondaryText)
-                            .animation(.easeInOut(duration: 0.2), value: isCloseHovered)
+                            .animation(.easeInOut(duration: 0.3), value: isCloseHovered)
                     }
                     .buttonStyle(.plain)
                     .onHover { hovering in

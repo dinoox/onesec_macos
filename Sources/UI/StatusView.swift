@@ -182,6 +182,10 @@ struct StatusView: View {
             )
         case let .serverResultReceived(summary, interactionID, _, _):
             recording.state = .idle
+            // overlay.showOverlay(content: { panelId in
+            //     ConvertHandleView(panelId: panelId, filePath: "/Users/wangxiaoyu/Downloads/response.webp")
+            // }, extraHeight: 200)
+            // return;
             if summary.isEmpty {
                 return
             }

@@ -23,7 +23,7 @@ class OverlayController {
     }
 
     @discardableResult
-    func showOverlay(@ViewBuilder content: (_ panelId: UUID) -> some View) -> UUID {
+    func showOverlay(@ViewBuilder content: (_ panelId: UUID) -> some View, extraHeight: CGFloat = 0) -> UUID {
         let statusFrame = StatusPanelManager.shared.getPanelFrame()
 
         let uuid = UUID()
@@ -35,7 +35,7 @@ class OverlayController {
         let overlayY = statusFrame.origin.y + 36 + spacing - shadowPadding
 
         let panel = NSPanel(
-            contentRect: NSRect(x: overlayX, y: overlayY, width: contentSize.width, height: contentSize.height),
+            contentRect: NSRect(x: overlayX, y: overlayY, width: contentSize.width, height: contentSize.height + extraHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false,
@@ -124,7 +124,7 @@ class OverlayController {
     }
 
     @discardableResult
-    func showOverlayAboveSelection(@ViewBuilder content: (_ panelId: UUID) -> some View) -> UUID? {
+    func showOverlayAboveSelection(@ViewBuilder content: (_ panelId: UUID) -> some View, extraHeight: CGFloat = 0) -> UUID? {
         var selectionBounds = getSelectionBounds()
 
         // 检查边界有效性（无法获取或返回无效的0值）
@@ -168,7 +168,7 @@ class OverlayController {
         let overlayY = textTopInWindowCoords + spacing - shadowPadding
 
         let panel = NSPanel(
-            contentRect: NSRect(x: overlayX, y: overlayY, width: contentSize.width, height: contentSize.height),
+            contentRect: NSRect(x: overlayX, y: overlayY, width: contentSize.width, height: contentSize.height + extraHeight),
             styleMask: [.borderless, .nonactivatingPanel],
             backing: .buffered,
             defer: false
