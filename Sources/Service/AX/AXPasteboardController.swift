@@ -120,6 +120,7 @@ class AXPasteboardController {
     static func copyCurrentSelectionAndRestore() async -> String? {
         let pasteboard = NSPasteboard.general
         let oldContents = pasteboard.string(forType: .string)
+        pasteboard.clearContents()
 
         // 模拟 Cmd+C 复制
         let source = CGEventSource(stateID: .hidSystemState)
