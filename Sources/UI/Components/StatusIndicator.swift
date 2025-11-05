@@ -186,5 +186,23 @@ struct StatusIndicator: View {
         .onReceive(Config.shared.$TEXT_PROCESS_MODE) { mode in
             isTranslateMode = mode == .translate
         }
+        .onReceive(
+            EventBus.shared.eventSubject
+                .compactMap { event in
+                    if case .recordingStarted = event {
+                        return true
+                    }
+                    return nil
+                }
+                .receive(on: DispatchQueue.main)
+        ) { _ in
+            if isHovered {
+                isHovered = false
+                if let panelId = tooltipPanelId {
+                    overlay.hideOverlay(uuid: panelId)
+                    tooltipPanelId = nil
+                }
+            }
+        }
     }
 }

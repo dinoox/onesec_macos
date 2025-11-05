@@ -160,12 +160,9 @@ class AXPasteboardController {
         let isZeroCharNotChange = pasteboard.string(forType: .string) == testMarker
         simulateUndo()
 
-        let hasInputFocus = pasteboard.changeCount > oldChangeCount
+        defer { restorePasteboard(oldContents) }
 
-        log.info("Zero-width test - oldChangeCount: \(oldChangeCount), newChangeCount: \(pasteboard.changeCount), hasInputFocus: \(hasInputFocus) isZeroCharNotChange: \(isZeroCharNotChange)")
-
-        restorePasteboard(oldContents)
-        return hasInputFocus && isZeroCharNotChange
+        return (pasteboard.changeCount > oldChangeCount) && isZeroCharNotChange
     }
 
     static func pasteTextToActiveApp(_ text: String) async {
