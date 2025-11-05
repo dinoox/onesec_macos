@@ -158,11 +158,14 @@ class AXPasteboardController {
         // 当为选中文本时,  changeCount 依旧会改变
         // 所以这里判断当前复制的新内容是否为零宽字符
         let isZeroCharNotChange = pasteboard.string(forType: .string) == testMarker
-
         simulateUndo()
-        restorePasteboard(oldContents)
 
-        return (pasteboard.changeCount > oldChangeCount) && isZeroCharNotChange
+        let hasInputFocus = pasteboard.changeCount > oldChangeCount
+
+        log.info("Zero-width test - oldChangeCount: \(oldChangeCount), newChangeCount: \(pasteboard.changeCount), hasInputFocus: \(hasInputFocus) isZeroCharNotChange: \(isZeroCharNotChange)")
+
+        restorePasteboard(oldContents)
+        return hasInputFocus && isZeroCharNotChange
     }
 
     static func pasteTextToActiveApp(_ text: String) async {
