@@ -7,20 +7,6 @@ private enum CardConstants {
     static let processingHeight: CGFloat = 78
 }
 
-private enum AnimationConstants {
-    static let springResponse: CGFloat = 0.6
-    static let springDamping: CGFloat = 0.825
-    static let morphSpringResponse: CGFloat = 1.5
-
-    static var defaultSpring: Animation {
-        .spring(response: springResponse, dampingFraction: springDamping)
-    }
-
-    static var morphSpring: Animation {
-        .spring(response: morphSpringResponse, dampingFraction: springDamping)
-    }
-}
-
 private enum ProgressConstants {
     static let progressIncrement: Double = 0.01
     static let timerInterval: TimeInterval = 0.01667
@@ -35,11 +21,6 @@ private enum MorphConstants {
     static let checkTransitionPoint: Double = 0.65
     static let lengthShrinkFactor: Double = 0.85
     static let rightEndShrinkFactor: Double = 0.75
-}
-
-extension Animation {
-    static var cardAnimation: Animation { AnimationConstants.defaultSpring }
-    static var morphAnimation: Animation { AnimationConstants.morphSpring }
 }
 
 struct ConvertHandleView: View {

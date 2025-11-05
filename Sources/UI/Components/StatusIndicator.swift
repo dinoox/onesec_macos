@@ -143,16 +143,16 @@ struct StatusIndicator: View {
                     )
                 }
             }
-            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: innerSize)
+            .animation(.quickSpringAnimation, value: innerSize)
         }
         .frame(width: baseSize, height: baseSize)
         .scaleEffect(outerScale, anchor: .bottom)
         .scaleEffect(isHovered ? 1.5 : 1.0, anchor: .bottom)
         .offset(y: recordState == .idle ? 0 : -4)
         .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 2)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isHovered)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: recordState)
-        .animation(.spring(response: 0.3, dampingFraction: 0.7), value: outerScale)
+        .animation(.quickSpringAnimation, value: isHovered)
+        .animation(.quickSpringAnimation, value: recordState)
+        .animation(.quickSpringAnimation, value: outerScale)
         .onHover { hovering in
             guard ConnectionCenter.shared.audioRecorderState == .idle else { return }
             StatusPanelManager.shared.ignoresMouseEvents(ignore: !hovering)

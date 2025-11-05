@@ -1,6 +1,19 @@
 import AppKit
 import SwiftUI
 
+struct HoverButtonStyle: ButtonStyle {
+    let normalColor: Color
+    let hoverColor: Color
+    @State private var isHovered = false
+    
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundColor(isHovered ? hoverColor : normalColor)
+            .animation(.quickSpringAnimation, value: isHovered)
+            .onHover { isHovered = $0 }
+    }
+}
+
 struct ContentCard: View {
     let panelId: UUID
     let title: String
@@ -11,29 +24,20 @@ struct ContentCard: View {
     private let autoCloseDuration = 12
     private let maxContentHeight: CGFloat = 600
 
-    // Hover 状态
-    @State private var isCloseHovered = false
-    @State private var isCopyButtonHovered = false
     @State private var isStopButtonHovered = false
-    @State private var isCollapseHovered = false
-
-    // 内容状态
     @State private var isContentCopied = false
     @State private var isContentCollapsed = false
     @State private var showBottomSection = true
     @State private var contentHeight: CGFloat = 0
-
-    // 定时器状态
     @State private var remainingSeconds = 12
     @State private var timerTask: Task<Void, Never>?
 
     var body: some View {
         VStack {
-            Spacer(minLength: 0)
+            Spacer()
             cardContent
         }
         .frame(width: cardWidth)
-        .animation(.spring(response: 0.4, dampingFraction: 0.825), value: showBottomSection)
     }
 
     private var cardContent: some View {
@@ -51,27 +55,17 @@ struct ContentCard: View {
                     Button(action: toggleContentCollapse) {
                         Image.systemSymbol("chevron.up")
                             .font(.system(size: 12, weight: .semibold))
-                            .foregroundColor(isCollapseHovered ? .overlayText : .overlaySecondaryText)
                             .rotationEffect(.degrees(isContentCollapsed ? 180 : 0))
                             .animation(.spring, value: isContentCollapsed)
-                            .animation(.spring(response: 0.35, dampingFraction: 0.7), value: isCollapseHovered)
                     }
-                    .buttonStyle(.plain)
-                    .onHover { hovering in
-                        isCollapseHovered = hovering
-                    }
+                    .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
 
                     Button(action: closeCard) {
                         Image.systemSymbol("xmark")
                             .font(.system(size: 12, weight: .semibold))
                             .padding(.trailing, 2)
-                            .foregroundColor(isCloseHovered ? .overlayText : .overlaySecondaryText)
-                            .animation(.easeInOut(duration: 0.3), value: isCloseHovered)
                     }
-                    .buttonStyle(.plain)
-                    .onHover { hovering in
-                        isCloseHovered = hovering
-                    }
+                    .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
                 }
 
                 if !isContentCollapsed {
@@ -98,17 +92,13 @@ struct ContentCard: View {
                         Button(action: handleCopyContent) {
                             Image.systemSymbol(isContentCopied ? "checkmark" : "document.on.document")
                                 .font(.system(size: 12, weight: .semibold))
-                                .foregroundColor(isContentCopied ? .overlayDisabled : (isCopyButtonHovered ? .overlayText : .overlaySecondaryText))
                                 .scaleEffect(isContentCopied ? 1.1 : 1.0)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.5), value: isContentCopied)
-                                .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isCopyButtonHovered)
+                                .animation(.quickSpringAnimation, value: isContentCopied)
                         }
                         .frame(width: 16, height: 16)
-                        .buttonStyle(.plain)
+                        .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
                         .disabled(isContentCopied)
-                        .onHover { hovering in
-                            isCopyButtonHovered = hovering
-                        }
+                        .opacity(isContentCopied ? 0.5 : 1.0)
                     }
                 }
             }
@@ -182,13 +172,13 @@ struct ContentCard: View {
 
     private func closeTipsSection() {
         stopAutoCloseTimer()
-        withAnimation(.spring(response: 0.4, dampingFraction: 0.9)) {
+        withAnimation(.springAnimation) {
             showBottomSection = false
         }
     }
 
     private func toggleContentCollapse() {
-        withAnimation(.spring(response: 0.5, dampingFraction: 0.825)) {
+        withAnimation(.springAnimation) {
             isContentCollapsed.toggle()
         }
     }
