@@ -8,7 +8,7 @@ class AXSelectionObserver {
     static let shared = AXSelectionObserver()
 
     private var observer: AXObserver?
-    private let textChangeThrottler = Throttler(interval: 1.0)
+    private let textChangeThrottler = Throttler(interval: 2.0)
 
     private init() {}
 

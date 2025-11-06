@@ -51,8 +51,6 @@ class IMEStateMonitor {
         else { return false }
 
         let sourceID = Unmanaged<CFString>.fromOpaque(sourceIDPtr).takeUnretainedValue() as String
-
-        log.debug("sourceID: \(sourceID)")
         if let cached = cachedIMEState, cached.sourceID == sourceID {
             return cached.isActive
         }

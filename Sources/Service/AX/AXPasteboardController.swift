@@ -12,6 +12,7 @@ import Vision
 struct PasteContext {
     let element: AXUIElement
     let originalText: String
+    var lastModifiedText: String
     let interactionID: String
     let position: Int
 }
@@ -27,7 +28,7 @@ class AXPasteboardController {
         if let element = AXElementAccessor.getFocusedElement(),
            let cursorRange = AXAtomic.getCursorRange()
         {
-            context = PasteContext(element: element, originalText: summary, interactionID: interactionID, position: cursorRange.location)
+            context = PasteContext(element: element, originalText: summary, lastModifiedText: "", interactionID: interactionID, position: cursorRange.location)
         }
 
         await pasteTextToActiveApp(summary)
@@ -64,21 +65,23 @@ class AXPasteboardController {
     }
 
     private static func checkTextModification() async {
-        guard let context = context else { return }
+        guard let ctx = context else { return }
         guard let currentElement = AXElementAccessor.getFocusedElement(),
-              CFEqual(context.element, currentElement)
+              CFEqual(ctx.element, currentElement)
         else {
             return
         }
 
-        let pastedText = ContextService.getInputContent(
-            contextLength: context.originalText.count * 2,
-            cursorPos: context.position + context.originalText.count / 2
+        let modifiedText = ContextService.getInputContent(
+            contextLength: ctx.originalText.count * 2,
+            cursorPos: ctx.position + ctx.originalText.count / 2
         ) ?? ""
 
-        if !pastedText.contains(context.originalText) {
-            log.info("Text Modified: \(context.originalText) -> \(pastedText),  cursorPos: \(context.position)")
-            let body = ["original": context.originalText, "modified": pastedText, "interaction_id": context.interactionID]
+        if !modifiedText.contains(ctx.originalText), modifiedText != ctx.lastModifiedText {
+            context!.lastModifiedText = modifiedText
+            // context = ctx
+            log.info("Text Modified: \(ctx.originalText) -> \(modifiedText),  cursorPos: \(ctx.position)")
+            let body = ["original": ctx.originalText, "modified": modifiedText, "interaction_id": ctx.interactionID]
             _ = try? await HTTPClient.shared.post(path: "/audio/update-text", body: body)
         }
     }
