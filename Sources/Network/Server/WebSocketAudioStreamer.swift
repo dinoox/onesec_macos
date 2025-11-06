@@ -136,8 +136,6 @@ extension WebSocketAudioStreamer {
 
                 case .userConfigUpdated: scheduleManualReconnect()
 
-                case let .pastedTextModified(original, modified, interactionID): sendPastedTextModified(original: original, modified: modified, interactionID: interactionID)
-
                 default:
                     break
                 }
@@ -213,16 +211,6 @@ extension WebSocketAudioStreamer {
 
             sendWebSocketMessage(type: .contextUpdated, data: data)
         }
-    }
-
-    func sendPastedTextModified(original: String, modified: String, interactionID: String) {
-        let data: [String: Any] = [
-            "original": original,
-            "modified": modified,
-            "interaction_id": interactionID,
-        ]
-
-        sendWebSocketMessage(type: .pastedTextModified, data: data)
     }
 
     func handleServerResourceRequested(type: String) {

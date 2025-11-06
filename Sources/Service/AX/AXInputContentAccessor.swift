@@ -9,7 +9,7 @@ import Cocoa
 import Vision
 
 class AXInputContentAccessor {
-    static func getFocusElementInputContent(contextLength: Int = 200) -> String? {
+    static func getFocusElementInputContent(contextLength: Int = 200, cursorPos: Int? = nil) -> String? {
         guard let element = AXElementAccessor.getFocusedElement() else {
             return nil
         }
@@ -24,22 +24,25 @@ class AXInputContentAccessor {
             return getFullContent(element: element)
         }
 
-        guard let rangeValue: AXValue = AXElementAccessor.getAttributeValue(
-            element: element, attribute: kAXSelectedTextRangeAttribute
-        ) else {
-            return nil
-        }
+        var cursorPos = cursorPos
+        if cursorPos == nil {
+            guard let rangeValue: AXValue = AXElementAccessor.getAttributeValue(
+                element: element, attribute: kAXSelectedTextRangeAttribute
+            ) else {
+                return nil
+            }
 
-        var cursorRange = CFRange()
-        guard AXValueGetValue(rangeValue, .cfRange, &cursorRange) else {
-            return nil
+            var cursorRange = CFRange()
+            guard AXValueGetValue(rangeValue, .cfRange, &cursorRange) else {
+                return nil
+            }
+            cursorPos = cursorRange.location
         }
-
-        // 计算范围
-        let cursorPos = cursorRange.location
         let half = contextLength >> 1
-        let start = max(0, cursorPos - half)
+        let start = max(0, cursorPos! - half)
         let length = min(totalLength - start, contextLength)
+
+        log.info("getFocusElementInputContent: start: \(start), length: \(length) cursorPos: \(cursorPos)")
 
         var targetRange = CFRangeMake(start, length)
         guard let rangeValuePtr = AXValueCreate(.cfRange, &targetRange) else {

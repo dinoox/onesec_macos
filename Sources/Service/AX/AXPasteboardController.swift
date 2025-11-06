@@ -40,7 +40,7 @@ class AXPasteboardController {
 
                 guard !Task.isCancelled else { return }
 
-                checkTextModification(context: context, originalText: summary, interactionID: interactionID)
+                await checkTextModification(context: context, originalText: summary, interactionID: interactionID)
             } onCancel: {}
         }
     }
@@ -67,23 +67,22 @@ class AXPasteboardController {
         context: (element: AXUIElement, position: Int, length: Int),
         originalText: String,
         interactionID: String,
-    ) {
+    ) async {
         guard let currentElement = AXElementAccessor.getFocusedElement(),
               CFEqual(context.element, currentElement)
         else {
             return
         }
 
-        guard let pastedText = getTextAtRange(
-            element: context.element,
-            location: context.position,
-            length: originalText.count,
-        ) else {
-            return
-        }
+        let pastedText = ContextService.getInputContent(
+            contextLength: originalText.count * 2,
+            cursorPos: context.position + originalText.count / 2
+        ) ?? ""
 
         if pastedText != originalText {
-            EventBus.shared.publish(.pastedTextModified(original: originalText, modified: pastedText, interactionID: interactionID))
+            log.info("Text Modification: \(originalText) -> \(pastedText)")
+            let body = ["original": originalText, "modified": pastedText, "interaction_id": interactionID]
+            _ = try? await HTTPClient.shared.post(path: "/audio/update-text", body: body)
         }
     }
 
@@ -101,7 +100,7 @@ class AXPasteboardController {
             return nil
         }
 
-        // 调整长度，避免超出边界
+        // 根据边界调整长度
         let actualLength = min(length, totalLength - location)
         if actualLength <= 0 {
             return ""

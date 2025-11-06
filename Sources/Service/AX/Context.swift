@@ -27,8 +27,8 @@ class ContextService {
         )
     }
 
-    static func getInputContent(contextLength: Int = 200) -> String? {
-        AXInputContentAccessor.getFocusElementInputContent(contextLength: contextLength)
+    static func getInputContent(contextLength: Int = 200, cursorPos: Int? = nil) -> String? {
+        AXInputContentAccessor.getFocusElementInputContent(contextLength: contextLength, cursorPos: cursorPos)
     }
 
     static func getHistoryContent() -> String? {

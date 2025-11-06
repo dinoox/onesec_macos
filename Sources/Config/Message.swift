@@ -18,7 +18,6 @@ enum MessageType: String, CaseIterable {
     case hotkeySettingResult = "hotkey_setting_result"
     case contextUpdated = "context_update"
     case resourceRequested = "resource_requested"
-    case pastedTextModified = "pasted_text_modified"
 }
 
 struct WebSocketMessage {

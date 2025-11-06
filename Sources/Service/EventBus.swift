@@ -26,7 +26,6 @@ enum AppEvent {
     case hotkeySettingResulted(mode: RecordMode, hotkeyCombination: [String], isConflict: Bool = false)
     //
     case mouseScreenChanged(screen: NSScreen)
-    case pastedTextModified(original: String, modified: String, interactionID: String)
 }
 
 class EventBus: @unchecked Sendable {
