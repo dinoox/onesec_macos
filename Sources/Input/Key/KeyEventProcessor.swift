@@ -57,9 +57,7 @@ class KeyEventProcessor {
         let hotkeyCombination = currentKeys.compactMap { KeyMapper.keyCodeMap[$0] }
         EventBus.shared.publish(.hotkeySettingUpdated(mode: hotkeySettingMode, hotkeyCombination: hotkeyCombination))
 
-        // 如果完成了快捷键设置
         if completed {
-            // 检测是否与另一个模式的快捷键冲突
             let newKeyCodes = hotkeyCombination.compactMap { KeyMapper.stringToKeyCodeMap[$0] }.sorted()
             let otherKeyCodes: [Int64]
             
@@ -71,7 +69,6 @@ class KeyEventProcessor {
             
             let isConflict = newKeyCodes == otherKeyCodes
             
-            // 只有不冲突时才保存
             if !isConflict {
                 Config.shared.saveHotkeySetting(mode: hotkeySettingMode, hotkeyCombination: hotkeyCombination)
             }

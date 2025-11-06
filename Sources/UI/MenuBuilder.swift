@@ -51,7 +51,7 @@ class MenuBuilder {
             descItem.isEnabled = false
             textModeSubmenu.addItem(descItem)
 
-            // 添加分隔线
+            // 分隔线
             if index < modes.count - 1 {
                 textModeSubmenu.addItem(NSMenuItem.separator())
             }
