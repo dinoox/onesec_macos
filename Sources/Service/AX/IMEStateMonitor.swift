@@ -52,6 +52,7 @@ class IMEStateMonitor {
 
         let sourceID = Unmanaged<CFString>.fromOpaque(sourceIDPtr).takeUnretainedValue() as String
 
+        log.debug("sourceID: \(sourceID)")
         if let cached = cachedIMEState, cached.sourceID == sourceID {
             return cached.isActive
         }
@@ -99,6 +100,9 @@ class IMEStateMonitor {
     }
 
     private func resetComposing(_ reason: String = "") {
+        if !reason.isEmpty {
+            log.debug("Reset Composing: \(reason)")
+        }
         isComposing = false
         composingCount = 0
     }
