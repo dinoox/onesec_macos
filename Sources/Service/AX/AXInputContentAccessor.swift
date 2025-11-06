@@ -42,8 +42,6 @@ class AXInputContentAccessor {
         let start = max(0, cursorPos! - half)
         let length = min(totalLength - start, contextLength)
 
-        log.info("getFocusElementInputContent: start: \(start), length: \(length) cursorPos: \(cursorPos)")
-
         var targetRange = CFRangeMake(start, length)
         guard let rangeValuePtr = AXValueCreate(.cfRange, &targetRange) else {
             return nil

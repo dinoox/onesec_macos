@@ -188,22 +188,16 @@ extension InputController {
             .sink { [weak self] event in
                 switch event {
                 case let .hotkeySettingStarted(mode):
-                    self?.handleHotkeySettingStarted(mode: mode)
+                    self?.keyEventProcessor.startHotkeySetting(mode: mode)
                 case let .hotkeySettingEnded(mode, hotkeyCombination):
-                    self?.handleHotkeySettingEnded(mode: mode, hotkeyCombination: hotkeyCombination)
+                    self?.keyEventProcessor.endHotkeySetting()
+                    Config.shared.saveHotkeySetting(mode: mode, hotkeyCombination: hotkeyCombination)
+                case .hotkeySettingResulted:
+                    self?.keyEventProcessor.endHotkeySetting()
                 default:
                     break
                 }
             }
             .store(in: &cancellables)
-    }
-
-    private func handleHotkeySettingStarted(mode: RecordMode) {
-        keyEventProcessor.startHotkeySetting(mode: mode)
-    }
-
-    private func handleHotkeySettingEnded(mode: RecordMode, hotkeyCombination: [String]) {
-        keyEventProcessor.endHotkeySetting()
-        Config.shared.saveHotkeySetting(mode: mode, hotkeyCombination: hotkeyCombination)
     }
 }

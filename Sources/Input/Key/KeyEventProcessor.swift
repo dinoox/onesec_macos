@@ -77,7 +77,6 @@ class KeyEventProcessor {
             }
             
             EventBus.shared.publish(.hotkeySettingResulted(mode: hotkeySettingMode, hotkeyCombination: hotkeyCombination, isConflict: isConflict))
-            endHotkeySetting()
         }
     }
 

@@ -153,12 +153,15 @@ struct ShortcutSettingsCard: View {
         VStack(spacing: 0) {
             HStack {
                 Text("快捷键设置")
-                    .font(.system(size: 14, weight: .semibold))
+                    .font(.system(size: 14, weight: .medium))
                     .foregroundColor(.overlayText)
 
                 Spacer()
 
-                Button(action: onClose) {
+                Button(action: {
+                    cancelEditing()
+                    onClose()
+                }) {
                     Image.systemSymbol("xmark")
                         .font(.system(size: 12, weight: .semibold))
                         .foregroundColor(isCloseHovered ? .overlayText : .overlaySecondaryText)
@@ -178,10 +181,10 @@ struct ShortcutSettingsCard: View {
             .padding(.top, 12)
             .padding(.bottom, 6)
 
-            VStack(alignment: .leading, spacing: 14) {
-                VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("普通模式")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 13))
                         .foregroundColor(.overlaySecondaryText)
 
                     ShortcutInputField(
@@ -192,9 +195,9 @@ struct ShortcutSettingsCard: View {
                     )
                 }
 
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 6) {
                     Text("命令模式")
-                        .font(.system(size: 12, weight: .medium))
+                        .font(.system(size: 13))
                         .foregroundColor(.overlaySecondaryText)
 
                     ShortcutInputField(
@@ -226,7 +229,7 @@ struct ShortcutSettingsCard: View {
                     lineWidth: 1
                 )
         )
-        .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 2)
+        .shadow(color: .overlayBackground.opacity(0.2), radius: 6, x: 0, y: 0)
         .offset(y: (normalConflictError != nil || commandConflictError != nil) ? -10 : 0)
         .animation(.easeInOut(duration: 0.2), value: currentEditingMode)
         .animation(.easeInOut(duration: 0.3), value: normalConflictError)
@@ -258,8 +261,7 @@ struct ShortcutSettingsCard: View {
         if let mode = currentEditingMode {
             let originalCodes = mode == .normal ? Config.shared.NORMAL_KEY_CODES : Config.shared.COMMAND_KEY_CODES
             let combination = originalCodes.map { KeyMapper.keyCodeToString($0) }
-            EventBus.shared.publish(
-                .hotkeySettingResulted(mode: mode, hotkeyCombination: combination))
+            EventBus.shared.publish(.hotkeySettingResulted(mode: mode, hotkeyCombination: combination))
             currentEditingMode = nil
         }
     }
