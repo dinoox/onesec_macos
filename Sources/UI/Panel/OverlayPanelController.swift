@@ -77,7 +77,7 @@ class OverlayController {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hasShadow = false
         panel.contentView = hosting
-        panel.becomeKey()
+        // panel.becomeKey()
         panel.makeKeyAndOrderFront(nil)
     }
 
