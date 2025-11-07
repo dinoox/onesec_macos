@@ -11,10 +11,10 @@ import Vision
 
 struct PasteContext {
     let element: AXUIElement
-    let originalText: String
-    var lastModifiedText: String
     let interactionID: String
     let position: Int
+    let originalText: String
+    var lastModifiedText: String
 }
 
 class AXPasteboardController {
@@ -26,9 +26,10 @@ class AXPasteboardController {
         guard !summary.isEmpty else { return }
 
         if let element = AXElementAccessor.getFocusedElement(),
-           let cursorRange = AXAtomic.getCursorRange()
+           let cursorRange = AXAtomic.getCursorRange(),
+           cursorRange.location == 0 // 当前只处理无前文的情况
         {
-            context = PasteContext(element: element, originalText: summary, lastModifiedText: "", interactionID: interactionID, position: cursorRange.location)
+            context = PasteContext(element: element, interactionID: interactionID, position: cursorRange.location, originalText: summary, lastModifiedText: "")
         }
 
         await pasteTextToActiveApp(summary)
@@ -43,9 +44,10 @@ class AXPasteboardController {
         checkModificationTask = Task {
             currentCancellable = EventBus.shared.events.sink { event in
                 if case .recordingStarted = event {
-                    checkModificationTask?.cancel()
                     Task {
+                        checkModificationTask?.cancel()
                         await AXSelectionObserver.shared.stopObserving()
+                        await submitTextModification()
                     }
                 }
             }
@@ -56,10 +58,22 @@ class AXPasteboardController {
 
     static func handleTextModifyNotification() {
         Task {
-            log.info("isComposing: \(IMEStateMonitor.shared.isComposing)")
             if !IMEStateMonitor.shared.isComposing {
                 await checkTextModification()
             }
+        }
+    }
+
+    private static func submitTextModification() async {
+        guard context != nil else { return }
+        let body = ["original": context!.originalText, "modified": context!.lastModifiedText, "interaction_id": context!.interactionID]
+        do {
+            let response = try await HTTPClient.shared.post(path: "/audio/update-text", body: body)
+            if let extractedTerm = response.data["extracted_term"] as? String {
+                EventBus.shared.publish(.hotWordAddRequested(word: extractedTerm))
+            }
+        } catch {
+            log.error("Update text failed: \(error)")
         }
     }
 
@@ -71,17 +85,11 @@ class AXPasteboardController {
             return
         }
 
-        let modifiedText = ContextService.getInputContent(
-            contextLength: ctx.originalText.count * 2,
-            cursorPos: ctx.position + ctx.originalText.count / 2
-        ) ?? ""
+        let modifiedText = AXAtomic.getTextAtRange(location: ctx.position, length: ctx.originalText.count) ?? ""
 
-        if !modifiedText.contains(ctx.originalText), modifiedText != ctx.lastModifiedText {
+        if modifiedText != ctx.originalText, modifiedText != ctx.lastModifiedText {
             context!.lastModifiedText = modifiedText
-            // context = ctx
-            log.info("Text Modified: \(ctx.originalText) -> \(modifiedText),  cursorPos: \(ctx.position)")
-            let body = ["original": ctx.originalText, "modified": modifiedText, "interaction_id": ctx.interactionID]
-            _ = try? await HTTPClient.shared.post(path: "/audio/update-text", body: body)
+            log.info("Text Modified: \(ctx.originalText) -> \(modifiedText)")
         }
     }
 

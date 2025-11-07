@@ -180,6 +180,11 @@ struct StatusView: View {
                 title: notificationType.title, content: notificationType.content,
                 autoHide: autoHide,
             )
+        case let .hotWordAddRequested(word):
+            overlay.showOverlay { panelId in
+                let content = "检测到热词 \"\(word)\", 是否添加到词库？"
+                ContentCard(panelId: panelId, title: "热词添加", content: content)
+            }
         case let .serverResultReceived(summary, interactionID, _, _):
             recording.state = .idle
             // overlay.showOverlay(content: { panelId in

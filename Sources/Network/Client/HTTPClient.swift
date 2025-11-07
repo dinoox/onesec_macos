@@ -1,5 +1,13 @@
 import Foundation
 
+struct HTTPResponse {
+    let code: Int
+    let message: String
+    let data: [String: Any]
+    let timestamp: Int64?
+    let success: Bool?
+}
+
 class HTTPClient {
     static let shared = HTTPClient()
 
@@ -15,7 +23,7 @@ class HTTPClient {
         session = URLSession(configuration: config, delegate: InsecureSSLDelegate(), delegateQueue: nil)
     }
 
-    func post(path: String, body: [String: Any]) async throws -> Data {
+    func post(path: String, body: [String: Any]) async throws -> HTTPResponse {
         let (sign, time) = Signature.generateSignature(params: body)
         
         var signedBody = body
@@ -41,10 +49,25 @@ class HTTPClient {
         guard (200 ... 299).contains(httpResponse.statusCode) else {
             throw HTTPError.statusCode(httpResponse.statusCode)
         }
-
-        log.info("HTTP Post Success: \(path), body: \(data)")
-
-        return data
+        
+        if let responseString = String(data: data, encoding: .utf8) {
+            log.info("POST \(path) Response: \(responseString)")
+        }
+        
+        guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+              let code = json["code"] as? Int,
+              let message = json["message"] as? String,
+              let dataDict = json["data"] as? [String: Any] else {
+            throw HTTPError.invalidJSON
+        }
+        
+        return HTTPResponse(
+            code: code,
+            message: message,
+            data: dataDict,
+            timestamp: json["timestamp"] as? Int64,
+            success: json["success"] as? Bool
+        )
     }
 }
 
@@ -52,6 +75,7 @@ enum HTTPError: Error {
     case invalidURL
     case invalidResponse
     case statusCode(Int)
+    case invalidJSON
 }
 
 private class InsecureSSLDelegate: NSObject, URLSessionDelegate {

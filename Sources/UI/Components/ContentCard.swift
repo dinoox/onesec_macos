@@ -17,6 +17,7 @@ struct ContentCard: View {
     @State private var contentHeight: CGFloat = 0
     @State private var remainingSeconds = 12
     @State private var timerTask: Task<Void, Never>?
+    @State private var isHovering = false
 
     var body: some View {
         VStack {
@@ -143,6 +144,9 @@ struct ContentCard: View {
         )
         .shadow(color: .overlayBackground.opacity(0.2), radius: 6, x: 0, y: 0)
         .onTapGesture { onTap?() }
+        .onHover { hovering in
+            isHovering = hovering
+        }
         .onAppear { startAutoCloseTimer() }
         .onDisappear { stopAutoCloseTimer() }
     }
@@ -184,13 +188,19 @@ struct ContentCard: View {
 
     private func startAutoCloseTimer() {
         timerTask = Task { @MainActor in
-            for second in (0 ... autoCloseDuration).reversed() {
+            var currentSeconds = autoCloseDuration
+            while currentSeconds >= 0 {
                 guard !Task.isCancelled else { return }
-                remainingSeconds = second
-                if second == 0 {
-                    closeCard()
-                    return
+                
+                if !isHovering {
+                    remainingSeconds = currentSeconds
+                    if currentSeconds == 0 {
+                        closeCard()
+                        return
+                    }
+                    currentSeconds -= 1
                 }
+                
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
         }

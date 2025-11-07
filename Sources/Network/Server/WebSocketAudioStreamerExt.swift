@@ -24,6 +24,8 @@ extension WebSocketAudioStreamer: WebSocketDelegate {
             scheduleReconnect(reason: "Disconnected: \(reason)")
 
         case let .text(string):
+            log.debug("WebSocket receive text: \(string)")
+            
             guard let data = string.data(using: .utf8) else {
                 return
             }
@@ -31,8 +33,6 @@ extension WebSocketAudioStreamer: WebSocketDelegate {
                 log.error("WebSocket JSON parse failed")
                 return
             }
-
-            log.debug("WebSocket receive text: \(json)")
 
             didReceiveMessage(json)
 

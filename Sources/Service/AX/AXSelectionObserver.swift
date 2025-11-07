@@ -26,6 +26,8 @@ class AXSelectionObserver {
             Task { @MainActor in
                 if notification as String == kAXSelectedTextChangedNotification as String {
                     AXPasteboardController.handleTextModifyNotification()
+                } else if notification as String == kAXFocusedUIElementChangedNotification as String {
+                    log.info("Focused UI Element Changed")
                 }
             }
         }, &observer)

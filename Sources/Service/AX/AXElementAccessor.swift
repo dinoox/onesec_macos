@@ -90,6 +90,8 @@ class AXElementAccessor {
 
         var isEditable: AnyObject?
         AXUIElementCopyAttributeValue(element, "AXIsEditable" as CFString, &isEditable)
+
+        log.info("isEditable: \(isEditable) \(role) \(element)")
         return (isEditable as? Bool) ?? false
     }
 }

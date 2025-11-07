@@ -25,6 +25,8 @@ enum AppEvent {
     case hotkeySettingUpdated(mode: RecordMode, hotkeyCombination: [String])
     case hotkeySettingResulted(mode: RecordMode, hotkeyCombination: [String], isConflict: Bool = false)
     //
+    case hotWordAddRequested(word: String)
+    //
     case mouseScreenChanged(screen: NSScreen)
 }
 
@@ -40,7 +42,7 @@ class EventBus: @unchecked Sendable {
     // 订阅所有
     lazy var events: AnyPublisher<AppEvent, Never> = eventSubject.share().eraseToAnyPublisher()
 
-    func subscribe<T>(to eventType: T.Type) -> AnyPublisher<T, Never> {
+    func subscribe<T>(to _: T.Type) -> AnyPublisher<T, Never> {
         eventSubject.share()
             .compactMap { event in
                 if case let loginEvent as T = event {
@@ -56,7 +58,7 @@ extension EventBus {
     var volumeChanged: AnyPublisher<Float, Never> {
         eventSubject.share()
             .compactMap { event in
-                guard case .volumeChanged(let volume) = event else { return nil }
+                guard case let .volumeChanged(volume) = event else { return nil }
                 return volume
             }
             .eraseToAnyPublisher()
