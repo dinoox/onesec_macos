@@ -173,7 +173,7 @@ struct StatusIndicator: View {
                             RoundedRectangle(cornerRadius: 12)
                                 .strokeBorder(borderGrey.opacity(0.8), lineWidth: 1),
                         )
-                        .shadow(color: Color.black.opacity(0.3), radius: 8, x: 0, y: 2)
+                        .shadow(color: Color.overlaySecondaryBackground.opacity(0.2), radius: 6, x: 0, y: 0)
                 }
                 tooltipPanelId = uuid
             } else {

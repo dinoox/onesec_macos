@@ -190,6 +190,8 @@ struct StatusView: View {
                     actionButtons: [
                         ActionButton(title: "添加") {
                             log.info("添加热词: \(word)")
+                            OverlayController.shared.hideOverlay(uuid: panelId)
+
                             Task {
                                 do {
                                     let response = try await HTTPClient.shared.post(
@@ -197,21 +199,22 @@ struct StatusView: View {
                                         body: ["hotword": word]
                                     )
                                     log.info("热词创建成功: \(response.message)")
-                                } catch {
-                                    log.error("热词创建失败: \(error)")
-                                }
+
+                                    if response.success == true {
+                                        _ = await MainActor.run {
+                                            overlay.showOverlay { panelId in
+                                                Tooltip(text: "添加成功 请在词库中查看", panelID: panelId, onTap: nil)
+                                            }
+                                        }
+                                    }
+                                } catch {}
                             }
-                            OverlayController.shared.hideOverlay(uuid: panelId)
                         },
                     ]
                 )
             }
         case let .serverResultReceived(summary, interactionID, _, _):
             recording.state = .idle
-            // overlay.showOverlay(content: { panelId in
-            //     ConvertHandleView(panelId: panelId, filePath: "/Users/wangxiaoyu/Downloads/response.webp")
-            // }, extraHeight: 200)
-            // return;
             if summary.isEmpty {
                 return
             }

@@ -22,7 +22,7 @@ extension Color {
             return NSColor.black
         }
     }
-    
+
     static func adaptive(light: Color, dark: Color) -> Color {
         let dynamicColor = NSColor(name: nil) { appearance in
             let isDark = appearance.bestMatch(from: [.darkAqua, .aqua]) == .darkAqua
@@ -39,6 +39,10 @@ extension Color {
 
     static var overlayPrimary: Color {
         adaptive(light: auroraGreen, dark: starlightYellow)
+    }
+
+    static var overlaySecondaryPrimary: Color {
+        adaptive(light: Color(hex: "#00af5f"), dark: Color(hex: "#ffcc00"))
     }
 
     /// Overlay 背景色：亮色模式白色，暗色模式黑色
@@ -58,7 +62,7 @@ extension Color {
 
     /// Overlay 次要文本：带透明度
     static var overlaySecondaryText: Color {
-        adaptive(light: Color(red: 112 / 255, green: 112 / 255, blue: 112 / 255), dark:Color(red: 136 / 255, green: 136 / 255, blue: 136 / 255))
+        adaptive(light: Color(red: 112 / 255, green: 112 / 255, blue: 112 / 255), dark: Color(red: 136 / 255, green: 136 / 255, blue: 136 / 255))
     }
 
     /// Overlay 占位文本：更淡的颜色
