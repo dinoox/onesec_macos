@@ -183,7 +183,28 @@ struct StatusView: View {
         case let .hotWordAddRequested(word):
             overlay.showOverlay { panelId in
                 let content = "检测到热词 \"\(word)\", 是否添加到词库？"
-                ContentCard(panelId: panelId, title: "热词添加", content: content)
+                ContentCard(
+                    panelId: panelId,
+                    title: "热词添加",
+                    content: content,
+                    actionButtons: [
+                        ActionButton(title: "添加") {
+                            log.info("添加热词: \(word)")
+                            Task {
+                                do {
+                                    let response = try await HTTPClient.shared.post(
+                                        path: "/hotword/create",
+                                        body: ["hotword": word]
+                                    )
+                                    log.info("热词创建成功: \(response.message)")
+                                } catch {
+                                    log.error("热词创建失败: \(error)")
+                                }
+                            }
+                            OverlayController.shared.hideOverlay(uuid: panelId)
+                        },
+                    ]
+                )
             }
         case let .serverResultReceived(summary, interactionID, _, _):
             recording.state = .idle
@@ -226,7 +247,11 @@ struct StatusView: View {
             : ("识别结果", false)
 
         let overlayBuilder: (UUID) -> ContentCard = { panelId in
-            ContentCard(panelId: panelId, title: title, content: content)
+            ContentCard(
+                panelId: panelId,
+                title: title,
+                content: content
+            )
         }
 
         if showAboveSelection {

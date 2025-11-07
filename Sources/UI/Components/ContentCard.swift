@@ -1,11 +1,17 @@
 import AppKit
 import SwiftUI
 
+struct ActionButton {
+    let title: String
+    let action: () -> Void
+}
+
 struct ContentCard: View {
     let panelId: UUID
     let title: String
     let content: String
-    let onTap: (() -> Void)? = nil
+    let onTap: (() -> Void)?
+    let actionButtons: [ActionButton]?
 
     private let cardWidth: CGFloat = 240
     private let autoCloseDuration = 12
@@ -19,6 +25,14 @@ struct ContentCard: View {
     @State private var timerTask: Task<Void, Never>?
     @State private var isHovering = false
 
+    init(panelId: UUID, title: String, content: String, onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil) {
+        self.panelId = panelId
+        self.title = title
+        self.content = content
+        self.onTap = onTap
+        self.actionButtons = actionButtons
+    }
+
     var body: some View {
         VStack {
             Spacer()
@@ -30,7 +44,7 @@ struct ContentCard: View {
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 0) {
             // 顶部标题栏
-            VStack(alignment: .leading, spacing: 8) {
+            VStack(alignment: .leading, spacing: 8.5) {
                 HStack(spacing: 8) {
                     Text(title)
                         .font(.system(size: 13, weight: .regular))
@@ -75,6 +89,24 @@ struct ContentCard: View {
                     .disabled(contentHeight <= maxContentHeight)
 
                     HStack {
+                        if let buttons = actionButtons, !buttons.isEmpty {
+                            HStack(spacing: 8) {
+                                ForEach(buttons.indices, id: \.self) { index in
+                                    Button(action: buttons[index].action) {
+                                        Text(buttons[index].title)
+                                            .font(.system(size: 11, weight: .medium))
+                                            .foregroundColor(.overlayText)
+                                            .padding(.horizontal, 10)
+                                            .padding(.vertical, 6)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 6)
+                                                    .stroke(Color.overlayBorder, lineWidth: 1)
+                                            )
+                                    }
+                                    .buttonStyle(PlainButtonStyle())
+                                }
+                            }
+                        }
                         Spacer()
                         Button(action: handleCopyContent) {
                             Image.systemSymbol(isContentCopied ? "checkmark" : "document.on.document")
@@ -191,7 +223,7 @@ struct ContentCard: View {
             var currentSeconds = autoCloseDuration
             while currentSeconds >= 0 {
                 guard !Task.isCancelled else { return }
-                
+
                 if !isHovering {
                     remainingSeconds = currentSeconds
                     if currentSeconds == 0 {
@@ -200,7 +232,7 @@ struct ContentCard: View {
                     }
                     currentSeconds -= 1
                 }
-                
+
                 try? await Task.sleep(nanoseconds: 1_000_000_000)
             }
         }

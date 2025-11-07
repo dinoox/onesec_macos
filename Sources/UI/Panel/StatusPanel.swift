@@ -129,7 +129,7 @@ class StatusPanel: NSPanel {
         let contentRect = NSRect(origin: .zero, size: newSize)
         let frameSize = frameRect(forContentRect: contentRect).size
 
-        // 计算底部居中的 frame，使用当前屏幕
+        // 计算底部居中的 frame
         guard
             let newFrame = calculateBottomCenterFrame(
                 for: frameSize, on: ConnectionCenter.shared.currentMouseScreen,
