@@ -38,6 +38,7 @@ class AXPasteboardController {
 
         // 启动检查任务
         // 检查用户是否修改了粘贴内容
+        // 延迟发送至下一轮录音周期开始
         checkModificationTask?.cancel()
         currentCancellable?.cancel()
 
@@ -66,6 +67,8 @@ class AXPasteboardController {
 
     private static func submitTextModification() async {
         guard context != nil else { return }
+        defer { context = nil }
+
         let body = ["original": context!.originalText, "modified": context!.lastModifiedText, "interaction_id": context!.interactionID]
         do {
             let response = try await HTTPClient.shared.post(path: "/audio/update-text", body: body)
