@@ -25,7 +25,7 @@ class AXSelectionObserver {
         let result = AXObserverCreate(pid, { _, _, notification, _ in
             Task { @MainActor in
                 if notification as String == kAXSelectedTextChangedNotification as String {
-                    AXPasteboardController.handleTextModifyNotification()
+                    AXPasteboardController.checkTextModification()
                 } else if notification as String == kAXFocusedUIElementChangedNotification as String {
                     log.info("Focused UI Element Changed")
                 }

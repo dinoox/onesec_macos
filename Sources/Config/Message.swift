@@ -117,6 +117,21 @@ struct AppInfo {
     }
 }
 
+// MARK: - 记录当前用户主机信息
+
+struct HostInfo {
+    let hostname: String
+    let osVersion: String
+
+    func toJSON() -> [String: Any] {
+        [
+            "hostname": hostname,
+            "os_version": osVersion,
+        ]
+    }
+}
+
+
 // MARK: - 记录当前输入框的上下文信息
 
 struct FocusContext {

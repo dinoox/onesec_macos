@@ -192,6 +192,7 @@ extension WebSocketAudioStreamer {
     func sendRecordingContext() {
         contextTask = Task {
             let appInfo = ContextService.getAppInfo()
+            let hostInfo = ContextService.getHostInfo()
             let selectText = await ContextService.getSelectedText()
             let inputContent = ContextService.getInputContent()
 
@@ -205,6 +206,7 @@ extension WebSocketAudioStreamer {
 
             let data: [String: Any] = [
                 "app_info": appInfo.toJSON(),
+                "host_info": hostInfo.toJSON(),
                 "focus_context": focusContext.toJSON(),
                 "focus_element_info": focusElementInfo.toJSON(),
             ]

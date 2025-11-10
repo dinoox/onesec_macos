@@ -89,6 +89,8 @@ class AXElementAccessor {
             return true
         }
 
+        log.info("Find extra focus role: \(String(describing: role))")
+
         var isEditable: AnyObject?
         AXUIElementCopyAttributeValue(element, "AXIsEditable" as CFString, &isEditable)
 

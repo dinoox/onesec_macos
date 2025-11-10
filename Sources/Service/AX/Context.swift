@@ -14,8 +14,8 @@ class ContextService {
         let frontApp = NSWorkspace.shared.frontmostApplication
 
         return AppInfo(
-            appName: frontApp?.localizedName ?? "未知应用",
-            bundleID: frontApp?.bundleIdentifier ?? "未知 Bundle ID",
+            appName: frontApp?.localizedName ?? "Unknown App",
+            bundleID: frontApp?.bundleIdentifier ?? "Unknown Bundle ID",
             shortVersion: frontApp?.bundleURL
                 .flatMap { Bundle(url: $0) }
                 .flatMap {
@@ -23,7 +23,14 @@ class ContextService {
                         forInfoDictionaryKey: "CFBundleShortVersionString"
                     ) as? String
                 }
-                ?? "未知版本",
+                ?? "Unknown Version",
+        )
+    }
+
+    static func getHostInfo() -> HostInfo {
+        return HostInfo(
+            hostname: Host.current().localizedName ?? "Unknown Host",
+            osVersion: ProcessInfo.processInfo.operatingSystemVersionString,
         )
     }
 

@@ -57,14 +57,6 @@ class AXPasteboardController {
         }
     }
 
-    static func handleTextModifyNotification() {
-        Task {
-            if !IMEStateMonitor.shared.isComposing {
-                await checkTextModification()
-            }
-        }
-    }
-
     private static func submitTextModification() async {
         guard context != nil else { return }
         defer { context = nil }
@@ -80,7 +72,7 @@ class AXPasteboardController {
         }
     }
 
-    private static func checkTextModification() async {
+    static func checkTextModification() {
         guard let ctx = context else { return }
         guard let currentElement = AXElementAccessor.getFocusedElement(),
               CFEqual(ctx.element, currentElement)
