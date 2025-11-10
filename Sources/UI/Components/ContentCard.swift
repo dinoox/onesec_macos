@@ -9,7 +9,7 @@ struct ActionButton {
 struct ContentCard: View {
     let panelID: UUID
     let title: String
-    let content: String
+    let content: [String]
     let onTap: (() -> Void)?
     let actionButtons: [ActionButton]?
 
@@ -18,6 +18,7 @@ struct ContentCard: View {
     private let maxContentHeight: CGFloat = 600
 
     @State private var isContentCopied = false
+    @State private var copiedContentIndex: Int? = nil
     @State private var isContentCollapsed = false
     @State private var showBottomSection = true
     @State private var contentHeight: CGFloat = 0
@@ -25,7 +26,7 @@ struct ContentCard: View {
     @State private var timerTask: Task<Void, Never>?
     @State private var isHovering = false
 
-    init(panelID: UUID, title: String, content: String, onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil) {
+    init(panelID: UUID, title: String, content: [String], onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil) {
         self.panelID = panelID
         self.title = title
         self.content = content
@@ -43,7 +44,7 @@ struct ContentCard: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // 顶部标题栏
+            // Top Title Bar
             VStack(alignment: .leading, spacing: 8.5) {
                 HStack(spacing: 8) {
                     Text(title)
@@ -71,22 +72,43 @@ struct ContentCard: View {
 
                 if !isContentCollapsed {
                     ScrollView(.vertical, showsIndicators: contentHeight > maxContentHeight) {
-                        Text(content)
-                            .font(.system(size: 12.5, weight: .regular))
-                            .foregroundColor(.overlaySecondaryText)
-                            .lineSpacing(3.8)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                GeometryReader { geometry in
-                                    Color.clear.onAppear {
-                                        contentHeight = geometry.size.height
+                        VStack(alignment: .leading, spacing: content.count > 1 ? 12 : 0) {
+                            ForEach(content.indices, id: \.self) { index in
+                                VStack(alignment: .leading, spacing: 10) {
+                                    Text(content[index])
+                                        .font(.system(size: 12.5, weight: .regular))
+                                        .foregroundColor(.overlaySecondaryText)
+                                        .lineSpacing(3.8)
+                                        .fixedSize(horizontal: false, vertical: true)
+                                        .frame(maxWidth: .infinity, alignment: .leading)
+
+                                    if content.count > 1 {
+                                        Button(action: { handleCopyContent(index: index) }) {
+                                            Text(copiedContentIndex == index ? "已复制" : "复制")
+                                                .font(.system(size: 11, weight: .medium))
+                                                .foregroundColor(.overlayText)
+                                                .padding(.horizontal, 10)
+                                                .padding(.vertical, 6)
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 6)
+                                                        .stroke(Color.overlayBorder, lineWidth: 1)
+                                                )
+                                        }
+                                        .buttonStyle(PlainButtonStyle())
+                                        .disabled(copiedContentIndex == index)
                                     }
                                 }
-                            )
+                            }
+                        }
+                        .background(
+                            GeometryReader { geometry in
+                                Color.clear.onAppear {
+                                    contentHeight = geometry.size.height
+                                }
+                            }
+                        )
                     }
                     .frame(maxHeight: maxContentHeight)
-                    .disabled(contentHeight <= maxContentHeight)
 
                     HStack {
                         if let buttons = actionButtons, !buttons.isEmpty {
@@ -108,23 +130,26 @@ struct ContentCard: View {
                             }
                         }
                         Spacer()
-                        Button(action: handleCopyContent) {
-                            Image.systemSymbol(isContentCopied ? "checkmark" : "document.on.document")
-                                .font(.system(size: 12, weight: .semibold))
-                                .scaleEffect(isContentCopied ? 1.1 : 1.0)
-                                .animation(.quickSpringAnimation, value: isContentCopied)
+
+                        if content.count == 1 {
+                            Button(action: { handleCopyContent(index: 0) }) {
+                                Image.systemSymbol(isContentCopied ? "checkmark" : "document.on.document")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .scaleEffect(isContentCopied ? 1.1 : 1.0)
+                                    .animation(.quickSpringAnimation, value: isContentCopied)
+                            }
+                            .frame(width: 16, height: 16)
+                            .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
+                            .disabled(isContentCopied)
+                            .opacity(isContentCopied ? 0.5 : 1.0)
                         }
-                        .frame(width: 16, height: 16)
-                        .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
-                        .disabled(isContentCopied)
-                        .opacity(isContentCopied ? 0.5 : 1.0)
                     }
                 }
             }
             .padding(.horizontal, 13)
             .padding(.vertical, 12)
 
-            // 底部提示条
+            // Bottom Timer Tip
             if showBottomSection {
                 VStack(spacing: 0) {
                     HStack(spacing: 0) {
@@ -201,19 +226,29 @@ struct ContentCard: View {
         }
     }
 
-    private func handleCopyContent() {
+    private func handleCopyContent(index: Int) {
+        guard index < content.count else { return }
+
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(content, forType: .string)
+        pasteboard.setString(content[index], forType: .string)
 
         withAnimation {
-            isContentCopied = true
+            if content.count == 1 {
+                isContentCopied = true
+            } else {
+                copiedContentIndex = index
+            }
         }
 
         Task {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             withAnimation {
-                isContentCopied = false
+                if content.count == 1 {
+                    isContentCopied = false
+                } else {
+                    copiedContentIndex = nil
+                }
             }
         }
     }

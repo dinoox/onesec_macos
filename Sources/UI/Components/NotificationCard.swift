@@ -1,18 +1,13 @@
 import SwiftUI
 
-struct NotificationState {
-    var isVisible: Bool = false
-    var opacity: Double = 0
-    var title: String = ""
-    var content: String = ""
-}
-
 struct NotificationCard: View {
     let title: String
     let content: String
+    let panelId: UUID
     let modeColor: Color
-    let onClose: (() -> Void)?
+    let autoHide: Bool
     let onTap: (() -> Void)?
+    let onClose: (() -> Void)?
 
     @State private var isCloseHovered = false
     @State private var isCardHovered = false
@@ -68,27 +63,33 @@ struct NotificationCard: View {
                 }
             }
 
-            if let onClose {
-                Button(action: onClose) {
-                    Image.systemSymbol("xmark")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundColor(isCloseHovered ? .overlayText : .overlaySecondaryText)
-                }
-                .buttonStyle(PlainButtonStyle())
-                .onHover { hovering in
-                    isCloseHovered = hovering
-                    if hovering {
-                        NSCursor.pointingHand.push()
-                    } else {
-                        NSCursor.pop()
-                    }
-                }
-                .padding(12)
-                .animation(.easeInOut(duration: 0.2), value: isCloseHovered)
-                .contentShape(Rectangle())
+            Button(action: {
+                OverlayController.shared.hideOverlay(uuid: panelId)
+                onClose?()
+            }) {
+                Image.systemSymbol("xmark")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(isCloseHovered ? .overlayText : .overlaySecondaryText)
             }
+            .buttonStyle(PlainButtonStyle())
+            .onHover { hovering in
+                isCloseHovered = hovering
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+            .padding(12)
+            .animation(.easeInOut(duration: 0.2), value: isCloseHovered)
+            .contentShape(Rectangle())
         }
         .scaleEffect(isCardHovered ? 1.02 : 1.0)
         .animation(.easeInOut(duration: 0.15), value: isCardHovered)
+        .onAppear {
+            if autoHide {
+                OverlayController.shared.setAutoHide(uuid: panelId, after: 3.0)
+            }
+        }
     }
 }

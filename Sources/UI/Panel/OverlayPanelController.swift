@@ -108,6 +108,31 @@ class OverlayController {
         panels[uuid] = panel
         return uuid
     }
+
+    @discardableResult
+    func showOverlayAbovePoint(point: NSPoint, @ViewBuilder content: (_ panelId: UUID) -> some View) -> UUID? {
+        guard let screen = MouseContextService.shared.getMouseScreen() ?? NSScreen.main else {
+            return nil
+        }
+
+        let uuid = UUID()
+        let (hosting, contentSize) = createHostingViewAndGetSize(content: { content(uuid) })
+
+        let origin = calculatePointOverlayOrigin(
+            point: point,
+            contentSize: contentSize,
+            screenFrame: screen.frame,
+            spacing: 0
+        )
+
+        let panel = createPanel(origin: origin, size: contentSize)
+        setupPanel(panel, hosting: hosting)
+        panel.isMovableByWindowBackground = true
+        animateFadeIn(panel)
+
+        panels[uuid] = panel
+        return uuid
+    }
 }
 
 // MARK: - Private Helpers
@@ -146,11 +171,22 @@ private extension OverlayController {
     }
 
     func calculateSelectionOverlayOrigin(bounds: NSRect, screenFrame: NSRect, screenHeight: CGFloat, spacing: CGFloat) -> NSPoint {
-        let textTopInWindowCoords = screenHeight - bounds.origin.y
+        let cocoaPoint = AXAtomic.convertAXPointToCocoa(axPoint: bounds.origin, screenHeight: screenHeight)
         return NSPoint(
             x: bounds.origin.x + screenFrame.origin.x - shadowPadding + spacing,
-            y: textTopInWindowCoords + screenFrame.origin.y - shadowPadding + spacing
+            y: cocoaPoint.y + screenFrame.origin.y - shadowPadding + spacing
         )
+    }
+
+    func calculatePointOverlayOrigin(point: NSPoint, contentSize: NSSize, screenFrame: NSRect, spacing: CGFloat) -> NSPoint {
+        var x = point.x - shadowPadding
+        let y = point.y + spacing - shadowPadding
+
+        let minX = screenFrame.origin.x
+        let maxX = screenFrame.origin.x + screenFrame.width - contentSize.width
+        x = max(minX, min(x, maxX))
+
+        return NSPoint(x: x, y: y)
     }
 
     func getValidSelectionBounds() -> NSRect? {

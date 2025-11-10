@@ -273,8 +273,19 @@ extension WebSocketAudioStreamer {
             else {
                 return
             }
-            let serverTime = data["server_time"] as? Int
-            EventBus.shared.publish(.serverResultReceived(summary: summary, interactionID: interactionID, processMode: processMode, serverTime: serverTime))
+
+            var polishedText: String?
+            if processMode == "TRANSLATE" {
+                guard
+                    let translateRes = data["translate_result"] as? [String: Any],
+                    let text = translateRes["polished_text"] as? String
+                else {
+                    return
+                }
+
+                polishedText = text
+            }
+            EventBus.shared.publish(.serverResultReceived(summary: summary, interactionID: interactionID, processMode: processMode, polishedText: polishedText ?? ""))
 
         default:
             break

@@ -14,7 +14,7 @@ enum AppEvent {
     case recordingStarted(recordMode: RecordMode)
     case recordingStopped
     case audioDataReceived(data: Data)
-    case serverResultReceived(summary: String, interactionID: String, processMode: String, serverTime: Int?)
+    case serverResultReceived(summary: String, interactionID: String, processMode: String, polishedText: String)
     case modeUpgraded(from: RecordMode, to: RecordMode)
     case notificationReceived(NotificationMessageType)
     //

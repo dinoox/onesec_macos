@@ -1,6 +1,47 @@
 import ApplicationServices
+import Cocoa
 
 class AXAtomic {
+    static func getCursorPosition() -> NSPoint? {
+        guard let element = AXElementAccessor.getFocusedElement(),
+              let rangeValue: AXValue = AXElementAccessor.getAttributeValue(
+                  element: element,
+                  attribute: kAXSelectedTextRangeAttribute
+              )
+        else {
+            return nil
+        }
+
+        guard let boundsValue: AXValue = AXElementAccessor.getParameterizedAttributeValue(
+            element: element,
+            attribute: kAXBoundsForRangeParameterizedAttribute,
+            parameter: rangeValue
+        ) else {
+            return nil
+        }
+
+        var rect = CGRect.zero
+        guard AXValueGetValue(boundsValue, .cgRect, &rect) else {
+            return nil
+        }
+
+        return NSPoint(x: rect.origin.x, y: rect.origin.y)
+    }
+
+    static func getCursorPositionInCocoa() -> NSPoint? {
+        log.info("getCursorPositionInCocoa")
+        guard let position = getCursorPosition() else {
+            return nil
+        }
+
+        guard let screen = NSScreen.screens.first(where: { NSMouseInRect(position, $0.frame, false) }) else {
+            return nil
+        }
+
+        log.info("screen: \(screen.frame), position: \(position)")
+        return convertAXPointToCocoa(axPoint: position, screenHeight: screen.frame.height)
+    }
+
     static func getCursorRange() -> CFRange? {
         guard let element = AXElementAccessor.getFocusedElement(),
               let rangeValue: AXValue = AXElementAccessor.getAttributeValue(
@@ -49,5 +90,14 @@ class AXAtomic {
             attribute: kAXStringForRangeParameterizedAttribute,
             parameter: targetRangeValue,
         )
+    }
+}
+
+extension AXAtomic {
+    /// 将 AX 坐标系的点转换为 Cocoa 坐标系
+    /// AX 坐标系: 原点在左上角, y 轴向下为正
+    /// Cocoa 坐标系: 原点在左下角, y 轴向上为正
+    static func convertAXPointToCocoa(axPoint: NSPoint, screenHeight: CGFloat) -> NSPoint {
+        NSPoint(x: axPoint.x, y: screenHeight - axPoint.y)
     }
 }

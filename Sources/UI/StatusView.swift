@@ -4,67 +4,26 @@ import SwiftUI
 
 struct StatusView: View {
     @State var recording = RecordingState()
-    @State var menuBuilder: MenuBuilder?
-    @State var settingsPanelId: UUID?
+    @State var menuBuilder = MenuBuilder()
     @State var notificationPanelId: UUID?
 
     private let overlay = OverlayController.shared
 
-    // 显示菜单
-    private func showMenu() {
-        if menuBuilder == nil {
-            menuBuilder = MenuBuilder(onShortcutSettings: toggleShortcutSettings)
-        }
-
-        if let button = NSApp.windows.first?.contentView {
-            menuBuilder?.showMenu(in: button)
-        }
-    }
-
-    // 切换快捷键设置卡片显示/隐藏
-    private func toggleShortcutSettings() {
-        if let panelId = settingsPanelId, overlay.isVisible(uuid: panelId) {
-            overlay.hideOverlay(uuid: panelId)
-            settingsPanelId = nil
-        } else {
-            let uuid = overlay.showOverlay { _ in
-                ShortcutSettingsCard(onClose: {
-                    if let panelId = settingsPanelId {
-                        overlay.hideOverlay(uuid: panelId)
-                        settingsPanelId = nil
-                    }
-                })
-            }
-            settingsPanelId = uuid
-        }
-    }
-
     private func showNotificationMessage(
         title: String, content: String, autoHide: Bool = true, onTap: (() -> Void)? = nil,
     ) {
-        if let panelId = notificationPanelId {
-            overlay.hideOverlay(uuid: panelId)
-        }
-
-        let uuid = overlay.showOverlay { _ in
+        notificationPanelId = overlay.showOverlay { panelId in
             NotificationCard(
                 title: title,
                 content: content,
+                panelId: panelId,
                 modeColor: recording.modeColor,
-                onClose: !autoHide
-                    ? {
-                        if let panelId = notificationPanelId {
-                            overlay.hideOverlay(uuid: panelId)
-                            notificationPanelId = nil
-                        }
-                    } : nil,
+                autoHide: autoHide,
                 onTap: onTap,
+                onClose: {
+                    notificationPanelId = nil
+                }
             )
-        }
-        notificationPanelId = uuid
-
-        if autoHide {
-            overlay.setAutoHide(uuid: uuid, after: 3.0)
         }
     }
 
@@ -125,7 +84,7 @@ struct StatusView: View {
                 mode: recording.mode
             ).onTapGesture {
                 overlay.hideAllOverlays()
-                showMenu()
+                menuBuilder.showMenu(in: NSApp.windows.first?.contentView ?? NSView())
             }
         }
         .padding(.bottom, 4)
@@ -186,7 +145,7 @@ struct StatusView: View {
                 ContentCard(
                     panelID: panelID,
                     title: "热词添加",
-                    content: content,
+                    content: [content],
                     actionButtons: [
                         ActionButton(title: "添加") {
                             log.info("添加热词: \(word)")
@@ -213,7 +172,7 @@ struct StatusView: View {
                     ]
                 )
             }
-        case let .serverResultReceived(summary, interactionID, _, _):
+        case let .serverResultReceived(summary, interactionID, _, polishedText):
             recording.state = .idle
             if summary.isEmpty {
                 return
@@ -227,6 +186,7 @@ struct StatusView: View {
                 if !isEditable {
                     log.info("No focused editable element, attempting fallback paste")
                     if element == nil, await AXPasteboardController.whasTextInputFocus() {
+                        showTranslateOverlay(polishedText: polishedText, summary: summary)
                         await AXPasteboardController.pasteTextToActiveApp(summary)
                         return
                     }
@@ -237,6 +197,7 @@ struct StatusView: View {
                 }
 
                 log.info("Focused editable element found, pasting text")
+                showTranslateOverlay(polishedText: polishedText, summary: summary)
                 await AXPasteboardController.pasteTextAndCheckModification(summary, interactionID)
             }
         default:
@@ -253,7 +214,7 @@ struct StatusView: View {
             ContentCard(
                 panelID: panelId,
                 title: title,
-                content: content
+                content: [content]
             )
         }
 
@@ -262,5 +223,15 @@ struct StatusView: View {
         } else {
             overlay.showOverlay(content: overlayBuilder)
         }
+    }
+
+    private func showTranslateOverlay(polishedText: String, summary: String) {
+        overlay.showOverlay(content: { panelId in
+            ContentCard(
+                panelID: panelId,
+                title: "翻译结果",
+                content: [polishedText, summary]
+            )
+        })
     }
 }
