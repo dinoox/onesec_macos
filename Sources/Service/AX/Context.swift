@@ -28,8 +28,11 @@ class ContextService {
     }
 
     static func getHostInfo() -> HostInfo {
+        var buffer = [CChar](repeating: 0, count: Int(MAXHOSTNAMELEN))
+        gethostname(&buffer, buffer.count)
+
         return HostInfo(
-            hostname: Host.current().localizedName ?? "Unknown Host",
+            hostname: String(cString: buffer),
             osVersion: ProcessInfo.processInfo.operatingSystemVersionString,
         )
     }
