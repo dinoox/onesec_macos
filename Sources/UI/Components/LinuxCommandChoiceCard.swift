@@ -86,6 +86,8 @@ struct CommandItem: View {
             isCopied = true
         }
 
+        OverlayController.shared.hideOverlay(uuid: panelID)
+
         Task { @MainActor in
             var response: HTTPResponse!
             do {
@@ -95,16 +97,14 @@ struct CommandItem: View {
                     body: ["preferred_linux_distro": linuxDistro]
                 )
 
-                OverlayController.shared.hideOverlay(uuid: panelID)
                 if response.success == true {
-                    Tooltip.show(content: response.message)
+                    Tooltip.show(content: "系统偏好已更新")
                 }
 
                 await AXPasteboardController.pasteTextToActiveApp(command.command
                     .formattedCommand)
 
             } catch {
-                OverlayController.shared.hideOverlay(uuid: panelID)
                 Tooltip.show(content: response.message, type: .error)
             }
         }
