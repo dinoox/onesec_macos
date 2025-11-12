@@ -286,7 +286,7 @@ extension WebSocketAudioStreamer {
                 polishedText = text
             }
 
-            if processMode == "command" {
+            if processMode == "TERMINAL" {
                 summary = summary.formattedCommand
             }
 
