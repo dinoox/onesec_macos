@@ -97,7 +97,7 @@ class OverlayController {
             bounds: bounds,
             screenFrame: screen.frame,
             screenHeight: screen.frame.height,
-            spacing: 10
+            spacing: 14
         )
 
         let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight)
@@ -173,7 +173,7 @@ private extension OverlayController {
     func calculateSelectionOverlayOrigin(bounds: NSRect, screenFrame: NSRect, screenHeight: CGFloat, spacing: CGFloat) -> NSPoint {
         let cocoaPoint = AXAtomic.convertAXPointToCocoa(axPoint: bounds.origin, screenHeight: screenHeight)
         return NSPoint(
-            x: bounds.origin.x + screenFrame.origin.x - shadowPadding + spacing,
+            x: bounds.origin.x + screenFrame.origin.x - shadowPadding + spacing - 6,
             y: cocoaPoint.y + screenFrame.origin.y - shadowPadding + spacing
         )
     }

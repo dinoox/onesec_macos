@@ -126,7 +126,7 @@ struct StatusIndicator: View {
                     if isTranslateMode {
                         Text("译")
                             .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(modeColor)
+                            .foregroundColor(borderGrey)
                     } else {
                         Circle()
                             .fill(borderGrey)

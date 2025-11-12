@@ -148,7 +148,7 @@ struct ContentCard<CustomContent: View>: View {
                         }
                         Spacer()
 
-                        if content.count == 1 {
+                        if content.count < 2 {
                             Button(action: { handleCopyContent(index: 0) }) {
                                 Image.systemSymbol(isContentCopied ? "checkmark" : "document.on.document")
                                     .font(.system(size: 12, weight: .semibold))
