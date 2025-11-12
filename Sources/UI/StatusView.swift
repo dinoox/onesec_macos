@@ -175,19 +175,23 @@ struct StatusView: View {
                     log.info("No focused editable element, attempting fallback paste")
                     if element == nil, await AXPasteboardController.whasTextInputFocus() {
                         if processMode == .translate {
-                            showTranslateOverlay(polishedText: polishedText, summary: summary)
+                            showTranslateOverlay(polishedText: polishedText)
                         }
                         await AXPasteboardController.pasteTextToActiveApp(summary)
                         return
                     }
 
-                    ContentCard<EmptyView>.showAboveSelection(title: recording.mode == .command ? "翻译结果" : "识别结果", content: [summary])
+                    if recording.mode == .command {
+                        ContentCard<EmptyView>.showAboveSelection(title: "命令处理结果", content: [summary])
+                    } else {
+                        ContentCard<EmptyView>.show(title: "识别结果", content: [summary])
+                    }
                     return
                 }
 
                 log.info("Focused editable element found, pasting text")
                 if processMode == .translate {
-                    showTranslateOverlay(polishedText: polishedText, summary: summary)
+                    showTranslateOverlay(polishedText: polishedText)
                 }
                 await AXPasteboardController.pasteTextAndCheckModification(summary, interactionID)
             }
@@ -200,7 +204,7 @@ struct StatusView: View {
         }
     }
 
-    private func showTranslateOverlay(polishedText: String, summary: String) {
-        ContentCard<EmptyView>.show(title: "翻译结果", content: [polishedText, summary])
+    private func showTranslateOverlay(polishedText: String) {
+        ContentCard<EmptyView>.show(title: "输入原文", content: [polishedText])
     }
 }
