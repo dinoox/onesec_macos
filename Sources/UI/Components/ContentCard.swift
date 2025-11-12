@@ -150,7 +150,7 @@ struct ContentCard<CustomContent: View>: View {
 
                         if content.count == 1 {
                             Button(action: { handleCopyContent(index: 0) }) {
-                                Image.systemSymbol(isContentCopied ? "checkmark" : "document.on.document")
+                                Image.systemSymbol(isContentCopied ? "checkmark" : "doc.on.doc")
                                     .font(.system(size: 12, weight: .semibold))
                                     .scaleEffect(isContentCopied ? 1.1 : 1.0)
                                     .animation(.quickSpringAnimation, value: isContentCopied)
