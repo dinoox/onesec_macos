@@ -204,14 +204,15 @@ extension WebSocketAudioStreamer {
             let focusContext = FocusContext(inputContent: inputContent ?? "", selectedText: selectText ?? "", historyContent: historyContent ?? "")
             let focusElementInfo = ContextService.getFocusElementInfo()
 
-            let data: [String: Any] = [
-                "app_info": appInfo.toJSON(),
-                "host_info": hostInfo.toJSON(),
-                "focus_context": focusContext.toJSON(),
-                "focus_element_info": focusElementInfo.toJSON(),
-            ]
+            let appContext = AppContext(
+                appInfo: appInfo,
+                hostInfo: hostInfo,
+                focusContext: focusContext,
+                focusElementInfo: focusElementInfo
+            )
 
-            sendWebSocketMessage(type: .contextUpdated, data: data)
+            sendWebSocketMessage(type: .contextUpdated, data: appContext.toJSON())
+            EventBus.shared.publish(.recordingContextUpdated(context: appContext))
         }
     }
 
@@ -290,7 +291,7 @@ extension WebSocketAudioStreamer {
                 summary = summary.formattedCommand
             }
 
-            EventBus.shared.publish(.serverResultReceived(summary: summary, interactionID: interactionID, processMode: processMode, polishedText: polishedText ?? ""))
+            EventBus.shared.publish(.serverResultReceived(summary: summary, interactionID: interactionID, processMode: TextProcessMode(rawValue: processMode) ?? .auto, polishedText: polishedText ?? ""))
 
         case .terminalLinuxChoice:
             cancelResponseTimeoutTimer()

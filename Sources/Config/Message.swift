@@ -109,6 +109,12 @@ struct AppInfo {
     let bundleID: String
     let shortVersion: String
 
+    static let empty = AppInfo(
+        appName: "",
+        bundleID: "",
+        shortVersion: ""
+    )
+
     func toJSON() -> [String: Any] {
         [
             "app_name": appName,
@@ -123,6 +129,11 @@ struct AppInfo {
 struct HostInfo {
     let hostname: String
     let osVersion: String
+
+    static let empty = HostInfo(
+        hostname: "",
+        osVersion: ""
+    )
 
     func toJSON() -> [String: Any] {
         [
@@ -139,6 +150,12 @@ struct FocusContext {
     let inputContent: String
     let selectedText: String
     let historyContent: String
+
+    static let empty = FocusContext(
+        inputContent: "",
+        selectedText: "",
+        historyContent: ""
+    )
 
     func toJSON() -> [String: Any] {
         [
@@ -177,6 +194,31 @@ struct FocusElementInfo {
     }
 }
 
+
+// MARK: - 记录当前录音的应用上下文
+
+struct AppContext {
+    let appInfo: AppInfo
+    let hostInfo: HostInfo
+    let focusContext: FocusContext
+    let focusElementInfo: FocusElementInfo
+
+     static let empty = AppContext(
+        appInfo: AppInfo.empty,
+        hostInfo: HostInfo.empty,
+        focusContext: FocusContext.empty,
+        focusElementInfo: FocusElementInfo.empty
+     )
+    
+    func toJSON() -> [String: Any] {
+        [
+            "app_info": appInfo.toJSON(),
+            "host_info": hostInfo.toJSON(),
+            "focus_context": focusContext.toJSON(),
+            "focus_element_info": focusElementInfo.toJSON(),
+        ]
+    }
+}
 
 //
 struct LinuxCommand: Codable {

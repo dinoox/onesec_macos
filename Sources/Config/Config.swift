@@ -36,6 +36,7 @@ enum TextProcessMode: String, CaseIterable {
     case auto = "AUTO"
     case translate = "TRANSLATE"
     case format = "FORMAT"
+    case terminal = "TERMINAL"
 
     var displayName: String {
         switch self {
@@ -45,6 +46,8 @@ enum TextProcessMode: String, CaseIterable {
             "翻译风格"
         case .format:
             "整理风格"
+        case .terminal:
+            "终端风格"
         }
     }
 
@@ -56,6 +59,8 @@ enum TextProcessMode: String, CaseIterable {
             "翻译文本, 一键省心"
         case .format:
             "结构重组, 深度优化"
+        case .terminal:
+            "终端风格, 一键省心"
         }
     }
 }

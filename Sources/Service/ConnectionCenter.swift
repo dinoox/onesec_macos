@@ -27,6 +27,7 @@ class ConnectionCenter: @unchecked Sendable {
 
     @Published var currentMouseScreen: NSScreen? = nil
     @Published var isAuthed: Bool = JWTValidator.isValid(Config.shared.AUTH_TOKEN)
+    @Published var currentRecordingAppContext: AppContext = AppContext.empty
 
     private var cancellables = Set<AnyCancellable>()
 
@@ -99,8 +100,13 @@ extension ConnectionCenter {
         EventBus.shared.eventSubject
             .receive(on: DispatchQueue.main)
             .sink { [weak self] event in
-                if case .notificationReceived(.authTokenFailed) = event {
+                switch event {
+                case .notificationReceived(.authTokenFailed):
                     self?.isAuthed = false
+                case .recordingContextUpdated(let context):
+                    self?.currentRecordingAppContext = context
+                default:
+                    break
                 }
             }
             .store(in: &cancellables)

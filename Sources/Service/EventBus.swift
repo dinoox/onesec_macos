@@ -14,7 +14,7 @@ enum AppEvent {
     case recordingStarted(recordMode: RecordMode)
     case recordingStopped
     case audioDataReceived(data: Data)
-    case serverResultReceived(summary: String, interactionID: String, processMode: String, polishedText: String)
+    case serverResultReceived(summary: String, interactionID: String, processMode: TextProcessMode, polishedText: String)
     case terminalLinuxChoice(bundleID: String, appName: String, endpointIdentifier: String, commands: [LinuxCommand])
     case modeUpgraded(from: RecordMode, to: RecordMode)
     case notificationReceived(NotificationMessageType)
@@ -29,6 +29,7 @@ enum AppEvent {
     case hotWordAddRequested(word: String)
     //
     case mouseScreenChanged(screen: NSScreen)
+    case recordingContextUpdated(context: AppContext)
 }
 
 class EventBus: @unchecked Sendable {

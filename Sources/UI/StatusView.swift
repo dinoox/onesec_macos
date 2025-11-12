@@ -76,16 +76,14 @@ struct StatusView: View {
     }
 
     var body: some View {
-        VStack {
-            // 状态指示器
-            StatusIndicator(
-                recordState: recording.state,
-                volume: recording.volume,
-                mode: recording.mode
-            ).onTapGesture {
-                overlay.hideAllOverlays()
-                menuBuilder.showMenu(in: NSApp.windows.first?.contentView ?? NSView())
-            }
+        // 状态指示器
+        StatusIndicator(
+            recordState: recording.state,
+            volume: recording.volume,
+            mode: recording.mode
+        ).onTapGesture {
+            overlay.hideAllOverlays()
+            menuBuilder.showMenu(in: NSApp.windows.first?.contentView ?? NSView())
         }
         .padding(.bottom, 4)
         .frame(width: 200, height: 80, alignment: .bottom)
@@ -174,20 +172,14 @@ struct StatusView: View {
             }
         case let .serverResultReceived(summary, interactionID, processMode, polishedText):
             recording.state = .idle
-            // let commands = [
-            //     LinuxCommand(distro: "Debian", command: "sudo apt update && sudo apt install git", displayName: "Debian"),
-            //     LinuxCommand(distro: "RedHat", command: "sudo yum install git", displayName: "RedHat"),
-            // ]
-            // OverlayController.shared.showOverlay { panelID in
-            //     LinuxCommandChoiceCard(panelID: panelID, commands: commands, bundleID: "", appName: "", endpointIdentifier: "")
-            // }
-            // return;
             if summary.isEmpty {
                 return
             }
 
             Task { @MainActor in
-                if processMode == "TERMINAL" {
+                if processMode == .terminal ||
+                    isTerminalAppWithoutAXSupport(ConnectionCenter.shared.currentRecordingAppContext.appInfo)
+                {
                     await AXPasteboardController.pasteTextToActiveApp(summary)
                     return
                 }
@@ -198,7 +190,7 @@ struct StatusView: View {
                 if !isEditable {
                     log.info("No focused editable element, attempting fallback paste")
                     if element == nil, await AXPasteboardController.whasTextInputFocus() {
-                        if processMode == "TRANSLATE" {
+                        if processMode == .translate {
                             showTranslateOverlay(polishedText: polishedText, summary: summary)
                         }
                         await AXPasteboardController.pasteTextToActiveApp(summary)
@@ -210,7 +202,7 @@ struct StatusView: View {
                 }
 
                 log.info("Focused editable element found, pasting text")
-                if processMode == "TRANSLATE" {
+                if processMode == .translate {
                     showTranslateOverlay(polishedText: polishedText, summary: summary)
                 }
                 await AXPasteboardController.pasteTextAndCheckModification(summary, interactionID)
