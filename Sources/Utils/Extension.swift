@@ -11,4 +11,10 @@ extension String {
             of: "\\s+", with: " ", options: .regularExpression
         ).trimmingCharacters(in: .whitespacesAndNewlines)
     }
+
+    var formattedCommand: String {
+        self.split(separator: "\n", omittingEmptySubsequences: true)
+            .map { $0.trimmingCharacters(in: .whitespaces) }
+            .joined(separator: " && \\\n")
+    }
 }

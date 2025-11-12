@@ -267,7 +267,7 @@ extension WebSocketAudioStreamer {
         case .recognitionSummary:
             cancelResponseTimeoutTimer()
             guard let data = json["data"] as? [String: Any],
-                  let summary = data["summary"] as? String,
+                  var summary = data["summary"] as? String,
                   let interactionID = data["interaction_id"] as? String,
                   let processMode = data["process_mode"] as? String
             else {
@@ -285,6 +285,11 @@ extension WebSocketAudioStreamer {
 
                 polishedText = text
             }
+
+            if processMode == "command" {
+                summary = summary.formattedCommand
+            }
+
             EventBus.shared.publish(.serverResultReceived(summary: summary, interactionID: interactionID, processMode: processMode, polishedText: polishedText ?? ""))
 
         case .terminalLinuxChoice:

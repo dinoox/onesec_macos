@@ -185,7 +185,7 @@ extension UDSClient {
         }
     }
 
-    private func handleConfigUpdatedMessage(json: [String: Any], timestamp: Int64) {
+    private func handleConfigUpdatedMessage(json: [String: Any], timestamp _: Int64) {
         guard
             let data = json["data"] as? [String: Any],
             let authToken = data["auth_token"] as? String,
@@ -219,7 +219,7 @@ extension UDSClient {
         }
 
         var data: [String: Any] = [
-            "reason": reason
+            "reason": reason,
         ]
 
         if let statusCode {
@@ -238,7 +238,7 @@ extension UDSClient {
 
         let data: [String: Any] = [
             "mode": mode.rawValue,
-            "hotkey_combination": hotkeyCombination
+            "hotkey_combination": hotkeyCombination,
         ]
 
         sendJSONMessage(WebSocketMessage.create(type: .hotkeySettingResult, data: data).toJSON())

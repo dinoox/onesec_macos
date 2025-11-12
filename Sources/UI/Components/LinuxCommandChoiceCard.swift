@@ -102,7 +102,8 @@ struct CommandItem: View {
                     }
                 }
 
-                await AXPasteboardController.pasteTextToActiveApp(command.command)
+                await AXPasteboardController.pasteTextToActiveApp(command.command
+                    .formattedCommand)
 
             } catch {
                 OverlayController.shared.hideOverlay(uuid: panelID)
