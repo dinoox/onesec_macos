@@ -117,6 +117,7 @@ extension StatusView {
                         return
                     }
 
+                    // TODO: 处理截图超时无焦点粘贴
                     if recording.mode == .command {
                         ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: [summary])
                     } else {

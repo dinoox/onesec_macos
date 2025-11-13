@@ -88,7 +88,11 @@ struct NotificationCard: View {
         .animation(.easeInOut(duration: 0.15), value: isCardHovered)
         .onAppear {
             if autoHide {
-                OverlayController.shared.setAutoHide(uuid: panelId, after: 3.0)
+                Task { @MainActor in
+                    try? await Task.sleep(nanoseconds: 3_000_000_000)
+                    guard !Task.isCancelled else { return }
+                    OverlayController.shared.hideOverlay(uuid: panelId)
+                }
             }
         }
     }

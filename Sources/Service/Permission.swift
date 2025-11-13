@@ -15,6 +15,7 @@ import Foundation
 enum PermissionType {
     case accessibility
     case microphone
+    case screenRecording
 }
 
 enum PermissionStatus: Equatable {
@@ -28,6 +29,7 @@ final class PermissionService: ObservableObject, @unchecked Sendable {
     
     @Published var microphonePermissionStatus: PermissionStatus = .notDetermined
     @Published var accessibilityPermissionStatus: PermissionStatus = .notDetermined
+    @Published var screenRecordingPermissionStatus: PermissionStatus = .notDetermined
     @Published var permissionsState: [PermissionType: PermissionStatus] = [:]
     
     private var cancellables = Set<AnyCancellable>()
@@ -45,6 +47,8 @@ final class PermissionService: ObservableObject, @unchecked Sendable {
             AXIsProcessTrusted() ? .granted : .denied
         case .microphone:
             microphoneStatus()
+        case .screenRecording:
+            screenRecordingStatus()
         }
     }
     
@@ -54,6 +58,8 @@ final class PermissionService: ObservableObject, @unchecked Sendable {
             requestAccessibility(completion: completion)
         case .microphone:
             requestMicrophone(completion: completion)
+        case .screenRecording:
+            requestScreenRecording(completion: completion)
         }
     }
     
@@ -62,16 +68,19 @@ final class PermissionService: ObservableObject, @unchecked Sendable {
         
         let micStatus = checkStatus(.microphone)
         let accessStatus = checkStatus(.accessibility)
+        let screenStatus = checkStatus(.screenRecording)
         
         DispatchQueue.main.async { [weak self] in
             guard let self else { return }
             
             microphonePermissionStatus = micStatus
             accessibilityPermissionStatus = accessStatus
+            screenRecordingPermissionStatus = screenStatus
             
             let results: [PermissionType: PermissionStatus] = [
                 .microphone: micStatus,
-                .accessibility: accessStatus
+                .accessibility: accessStatus,
+                .screenRecording: screenStatus
             ]
             
             permissionsState = results
@@ -134,12 +143,36 @@ final class PermissionService: ObservableObject, @unchecked Sendable {
         }
     }
 
+    private func screenRecordingStatus() -> PermissionStatus {
+        CGPreflightScreenCaptureAccess() ? .granted : .denied
+    }
+    
+    private func requestScreenRecording(completion: @escaping @Sendable (Bool) -> Void) {
+        if CGPreflightScreenCaptureAccess() {
+            completion(true)
+            return
+        }
+        
+        DispatchQueue.global(qos: .userInitiated).async {
+            let granted = CGRequestScreenCaptureAccess()
+            DispatchQueue.main.async { [weak self] in
+                guard let self else { return }
+                if !granted {
+                    self.openSystemPreferences(for: .screenRecording)
+                }
+                completion(granted)
+            }
+        }
+    }
+    
     private func openSystemPreferences(for type: PermissionType) {
         let urlString = switch type {
         case .accessibility:
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         case .microphone:
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Microphone"
+        case .screenRecording:
+            "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture"
         }
         
         if let url = URL(string: urlString) {
@@ -169,6 +202,7 @@ final class PermissionService: ObservableObject, @unchecked Sendable {
             guard let self else { return }
             let newMicStatus = checkStatus(.microphone)
             let newAccessStatus = checkStatus(.accessibility)
+            let newScreenStatus = checkStatus(.screenRecording)
             
             var hasChanges = false
             
@@ -182,10 +216,16 @@ final class PermissionService: ObservableObject, @unchecked Sendable {
                 hasChanges = true
             }
             
+            if screenRecordingPermissionStatus != newScreenStatus {
+                screenRecordingPermissionStatus = newScreenStatus
+                hasChanges = true
+            }
+            
             if hasChanges {
                 permissionsState = [
                     .microphone: newMicStatus,
-                    .accessibility: newAccessStatus
+                    .accessibility: newAccessStatus,
+                    .screenRecording: newScreenStatus
                 ]
             }
         }

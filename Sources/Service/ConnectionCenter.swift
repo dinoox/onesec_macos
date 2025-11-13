@@ -59,7 +59,9 @@ class ConnectionCenter: @unchecked Sendable {
 
     func hasPermissions() -> Bool {
         guard permissionsState.count != 0 else { return false }
-        return permissionsState.values.allSatisfy { $0 == .granted }
+        
+        let required: [PermissionType] = [.accessibility, .microphone]
+        return required.allSatisfy { permissionsState[$0] == .granted }
     }
 
     func connectWss() {
