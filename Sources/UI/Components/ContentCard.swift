@@ -89,7 +89,7 @@ struct ContentCard<CustomContent: View>: View {
                                 ForEach(content.indices, id: \.self) { index in
                                     VStack(alignment: .leading, spacing: 10) {
                                         Text(content[index])
-                                            .font(.system(size: 12.5, weight: .regular))
+                                            .font(.system(size: 13, weight: .regular))
                                             .foregroundColor(.overlaySecondaryText)
                                             .lineSpacing(3.8)
                                             .fixedSize(horizontal: false, vertical: true)
@@ -171,21 +171,21 @@ struct ContentCard<CustomContent: View>: View {
                 VStack(spacing: 0) {
                     HStack(spacing: 0) {
                         Text("这条消息将在 ")
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                             .foregroundColor(Color.overlaySecondaryText)
 
                         Text("\(remainingSeconds)")
-                            .font(.system(size: 10, design: .monospaced))
+                            .font(.system(size: 11, design: .monospaced))
                             .fontWeight(.bold)
                             .foregroundColor(Color.overlaySecondaryText)
 
                         Text(" 秒后自动关闭，")
-                            .font(.system(size: 10))
+                            .font(.system(size: 11))
                             .foregroundColor(Color.overlaySecondaryText)
 
                         Button(action: closeTipsSection) {
                             Text("点击停止")
-                                .font(.system(size: 10))
+                                .font(.system(size: 11))
                                 .foregroundColor(Color.overlayText)
                         }
                         .buttonStyle(UnderlineButtonStyle())

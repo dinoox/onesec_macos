@@ -38,7 +38,7 @@ extension Color {
     }
 
     static var overlayPrimary: Color {
-        adaptive(light: auroraGreen, dark: starlightYellow)
+        adaptive(light: .green, dark: Color(red: 245 / 255, green: 193 / 255, blue: 87 / 255))
     }
 
     static var overlaySecondaryPrimary: Color {
@@ -75,7 +75,7 @@ extension Color {
 
     /// Overlay 次要文本：带透明度
     static var overlaySecondaryText: Color {
-        adaptive(light: Color(red: 112 / 255, green: 112 / 255, blue: 112 / 255), dark: Color(red: 136 / 255, green: 136 / 255, blue: 136 / 255))
+        adaptive(light: Color(red: 112 / 255, green: 112 / 255, blue: 112 / 255), dark: Color(red: 140 / 255, green: 140 / 255, blue: 140 / 255))
     }
 
     /// Overlay 占位文本：更淡的颜色

@@ -8,7 +8,7 @@ struct HoverButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
             .foregroundColor(isHovered ? hoverColor : normalColor)
-            .background(isHovered ? Color.overlayButtonHoverBackground : .overlayButtonBackground)
+            .background(Color.overlayButtonBackground)
             .animation(.quickSpringAnimation, value: isHovered)
             .onHover { hovering in
                 isHovered = hovering

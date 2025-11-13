@@ -43,6 +43,17 @@ struct Tooltip: View {
         }
     }
 
+    private var borderColor: Color {
+        switch type {
+        case .primary:
+            return Color.overlayPrimary.opacity(0.8)
+        case .error:
+            return Color.overlayBorder.opacity(0.8)
+        case .plain:
+            return Color.overlayBorder.opacity(0.8)
+        }
+    }
+
     var body: some View {
         HStack(spacing: 6) {
             if showBell {
@@ -62,7 +73,7 @@ struct Tooltip: View {
         )
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .strokeBorder(borderGrey.opacity(0.8), lineWidth: 1)
+                .strokeBorder(borderColor, lineWidth: 1)
         )
         .shadow(color: Color.overlaySecondaryBackground.opacity(0.2), radius: 6, x: 0, y: 0)
         .onAppear {
