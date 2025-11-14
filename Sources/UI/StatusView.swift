@@ -117,11 +117,11 @@ extension StatusView {
                         return
                     }
 
-                    // TODO: 处理截图超时无焦点粘贴
+                    // TODO: 处理显示位置
                     if recording.mode == .command {
-                        ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: [summary])
+                        ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: [summary], cardWidth: 280, spacingX: 8, spacingY: 14)
                     } else {
-                        ContentCard<EmptyView>.show(title: "识别结果", content: [summary])
+                        ContentCard<EmptyView>.show(title: "识别结果", content: [summary], cardWidth: 300)
                     }
                     return
                 }
@@ -208,6 +208,18 @@ extension StatusView {
     }
 
     private func showTranslateOverlay(polishedText: String) {
-        ContentCard<EmptyView>.show(title: "输入原文", content: [polishedText])
+        OverlayController.shared.showOverlayAboveSelection(
+            content: { panelID in
+                ContentCard<EmptyView>(
+                    panelID: panelID,
+                    title: "输入原文",
+                    content: [polishedText],
+                    onTap: nil,
+                    actionButtons: nil
+                )
+            },
+            spacingX: 0,
+            spacingY: 10
+        )
     }
 }

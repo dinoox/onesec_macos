@@ -14,8 +14,8 @@ struct ContentCard<CustomContent: View>: View {
     let onTap: (() -> Void)?
     let actionButtons: [ActionButton]?
     let customContent: (() -> CustomContent)?
+    let cardWidth: CGFloat
 
-    private let cardWidth: CGFloat = 250
     private let autoCloseDuration = 12
     private let maxContentHeight: CGFloat = 600
 
@@ -34,6 +34,7 @@ struct ContentCard<CustomContent: View>: View {
         content: [String] = [],
         onTap: (() -> Void)? = nil,
         actionButtons: [ActionButton]? = nil,
+        cardWidth: CGFloat = 250,
         @ViewBuilder customContent: @escaping () -> CustomContent
     ) {
         self.panelID = panelID
@@ -41,6 +42,7 @@ struct ContentCard<CustomContent: View>: View {
         self.content = content
         self.onTap = onTap
         self.actionButtons = actionButtons
+        self.cardWidth = cardWidth
         self.customContent = customContent
     }
 
@@ -303,27 +305,29 @@ extension ContentCard where CustomContent == EmptyView {
         title: String,
         content: [String],
         onTap: (() -> Void)? = nil,
-        actionButtons: [ActionButton]? = nil
+        actionButtons: [ActionButton]? = nil,
+        cardWidth: CGFloat = 250
     ) {
         self.panelID = panelID
         self.title = title
         self.content = content
         self.onTap = onTap
         self.actionButtons = actionButtons
+        self.cardWidth = cardWidth
         customContent = nil
     }
 }
 
 extension ContentCard {
-    static func show(title: String, content: [String], onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil) {
+    static func show(title: String, content: [String], onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250) {
         OverlayController.shared.showOverlay { panelID in
-            ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons)
+            ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons, cardWidth: cardWidth)
         }
     }
 
-    static func showAboveSelection(title: String, content: [String], onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil) {
-        OverlayController.shared.showOverlayAboveSelection { panelID in
-            ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons)
-        }
+    static func showAboveSelection(title: String, content: [String], onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250, spacingX: CGFloat = 0, spacingY: CGFloat = 0) {
+        OverlayController.shared.showOverlayAboveSelection(content: { panelID in
+            ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons, cardWidth: cardWidth)
+        }, spacingX: spacingX, spacingY: spacingY)
     }
 }

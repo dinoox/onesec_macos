@@ -83,10 +83,13 @@ class OverlayController {
     }
 
     @discardableResult
-    func showOverlayAboveSelection(@ViewBuilder content: (_ panelId: UUID) -> some View, extraHeight: CGFloat = 0) -> UUID? {
-        guard let bounds = getValidSelectionBounds(),
-              let screen = MouseContextService.shared.getMouseScreen() ?? NSScreen.main
-        else {
+    func showOverlayAboveSelection(@ViewBuilder content: (_ panelId: UUID) -> some View, spacingX: CGFloat = 14, spacingY: CGFloat = 14, extraHeight: CGFloat = 0) -> UUID? {
+        let (bounds, isExactBounds) = getValidSelectionBounds()
+        guard let bounds = bounds else {
+            return nil
+        }
+
+        guard let screen = MouseContextService.shared.getMouseScreen() ?? NSScreen.main else {
             return nil
         }
 
@@ -97,13 +100,13 @@ class OverlayController {
             bounds: bounds,
             screenFrame: screen.frame,
             screenHeight: screen.frame.height,
-            spacing: 14
+            spacingX: isExactBounds ? 0 : spacingX,
+            spacingY: isExactBounds ? 0 : spacingY
         )
 
         let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight)
         setupPanel(panel, hosting: hosting)
         panel.isMovableByWindowBackground = true
-        panel.becomeKey()
         animateFadeIn(panel)
 
         panels[uuid] = panel
@@ -171,11 +174,11 @@ private extension OverlayController {
         )
     }
 
-    func calculateSelectionOverlayOrigin(bounds: NSRect, screenFrame: NSRect, screenHeight: CGFloat, spacing: CGFloat) -> NSPoint {
+    func calculateSelectionOverlayOrigin(bounds: NSRect, screenFrame: NSRect, screenHeight: CGFloat, spacingX: CGFloat, spacingY: CGFloat) -> NSPoint {
         let cocoaPoint = AXAtomic.convertAXPointToCocoa(axPoint: bounds.origin, screenHeight: screenHeight)
         return NSPoint(
-            x: bounds.origin.x + screenFrame.origin.x - shadowPadding + spacing - 6,
-            y: cocoaPoint.y + screenFrame.origin.y - shadowPadding + spacing
+            x: bounds.origin.x + screenFrame.origin.x - shadowPadding + spacingX,
+            y: cocoaPoint.y + screenFrame.origin.y - shadowPadding + spacingY
         )
     }
 
@@ -190,19 +193,19 @@ private extension OverlayController {
         return NSPoint(x: x, y: y)
     }
 
-    func getValidSelectionBounds() -> NSRect? {
+    func getValidSelectionBounds() -> (bounds: NSRect?, isExact: Bool) {
         if let bounds = getSelectionBounds(),
            bounds.width >= 1, bounds.height >= 1
         {
-            return bounds
+            return (bounds, true)
         }
 
         guard let mouseBounds = MouseContextService.shared.getMouseRect() else {
-            return nil
+            return (nil, false)
         }
 
         log.info("Fallback: \(mouseBounds) \(String(describing: MouseContextService.shared.getMouseScreen()))")
-        return mouseBounds
+        return (mouseBounds, false)
     }
 
     func getSelectionBounds() -> NSRect? {

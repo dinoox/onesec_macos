@@ -59,10 +59,24 @@ class AXSelectionObserver {
         self.observer = observer
         CFRunLoopAddSource(CFRunLoopGetCurrent(), AXObserverGetRunLoopSource(observer), .defaultMode)
 
-        // 监听当前焦点元素
+        // 系统更新焦点元素需要时间
+        Task { @MainActor in
+            try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
+            self.tryAddNotificationsForFocusedElement(app: app, retryCount: 3)
+        }
+    }
+    
+    private func tryAddNotificationsForFocusedElement(app: NSRunningApplication, retryCount: Int = 0) {
+        guard observer != nil else { return }
+        
         if let focusedElement = AXElementAccessor.getFocusedElement() {
             log.info("Start Observing: \(app.localizedName ?? "Unknown")")
             addAllNotifications(to: focusedElement)
+        } else if retryCount > 0 {
+            Task { @MainActor in
+                try? await Task.sleep(nanoseconds: 50_000_000) // 50ms
+                self.tryAddNotificationsForFocusedElement(app: app, retryCount: retryCount - 1)
+            }
         }
     }
 
@@ -73,6 +87,7 @@ class AXSelectionObserver {
         let notifications: [String] = [
             kAXSelectedTextChangedNotification as String,
             kAXFocusedUIElementChangedNotification as String,
+            kAXValueChangedNotification as String,
         ]
 
         for notification in notifications {

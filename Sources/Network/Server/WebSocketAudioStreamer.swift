@@ -277,14 +277,10 @@ extension WebSocketAudioStreamer {
 
             var polishedText: String?
             if processMode == "TRANSLATE" {
-                guard
-                    let translateRes = data["translate_result"] as? [String: Any],
-                    let text = translateRes["polished_text"] as? String
-                else {
-                    return
-                }
+                let translateRes = data["translate_result"] as? [String: Any]
+                let text = translateRes?["polished_text"] as? String
 
-                polishedText = text
+                polishedText = text ?? ""
             }
 
             if processMode == "TERMINAL" {
