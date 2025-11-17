@@ -17,6 +17,9 @@ class AXTranslationAccessor {
     static func setupMouseUpListener() {
         mouseDownMonitor = NSEvent.addGlobalMonitorForEvents(matching: .leftMouseDown) { _ in
             Task { @MainActor in
+                if Config.shared.TEXT_PROCESS_MODE != .translate {
+                    return
+                }
                 hasMouseDown = true
                 mouseDownPoint = NSEvent.mouseLocation
                 pasteboardText = NSPasteboard.general.string(forType: .string) ?? ""

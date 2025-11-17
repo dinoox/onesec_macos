@@ -17,7 +17,7 @@ struct ContentCard<CustomContent: View>: View {
     let cardWidth: CGFloat
 
     private let autoCloseDuration = 12
-    private let maxContentHeight: CGFloat = 600
+    private let maxContentHeight: CGFloat = 350
 
     @State private var isContentCopied = false
     @State private var copiedContentIndex: Int? = nil
