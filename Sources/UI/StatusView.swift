@@ -106,7 +106,7 @@ extension StatusView {
                 let element = AXElementAccessor.getFocusedElement()
                 let isEditable = element.map { AXElementAccessor.isEditableElement($0) } ?? false
 
-                await LazyPasteProbe.shared.runProbe()
+                await AXTest.runLazyPasteboardProbe()
                 return;
                 // 尝试粘贴文本
                 if !isEditable {
