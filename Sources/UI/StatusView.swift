@@ -91,10 +91,14 @@ extension StatusView {
             ])
         case let .serverResultReceived(summary, interactionID, processMode, polishedText):
             recording.state = .idle
+            Task { @MainActor in
+                AXTest.runLazyPasteboardProbe()
+            }
+            return;
             if summary.isEmpty {
                 return
             }
-
+            
             Task { @MainActor in
                 if processMode == .terminal,
                    isTerminalAppWithoutAXSupport(ConnectionCenter.shared.currentRecordingAppContext.appInfo)
@@ -106,8 +110,6 @@ extension StatusView {
                 let element = AXElementAccessor.getFocusedElement()
                 let isEditable = element.map { AXElementAccessor.isEditableElement($0) } ?? false
 
-                await AXTest.runLazyPasteboardProbe()
-                return;
                 // 尝试粘贴文本
                 if !isEditable {
                     log.info("No focused editable element, attempting fallback paste")
