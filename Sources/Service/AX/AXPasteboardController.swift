@@ -134,6 +134,10 @@ class AXPasteboardController {
         let pasteboard = NSPasteboard.general
         let oldContents = pasteboard.string(forType: .string)
 
+        if await copyCurrentSelectionAndRestore() != nil {
+            return true
+        }
+
         pasteboard.clearContents()
         pasteboard.setString(testMarker, forType: .string)
 
@@ -154,8 +158,6 @@ class AXPasteboardController {
 
         return (pasteboard.changeCount > oldChangeCount) && isZeroCharNotChange
     }
-
-
 
     static func pasteTextToActiveApp(_ text: String) async {
         log.info("Paste Text To Active App: \(text)")

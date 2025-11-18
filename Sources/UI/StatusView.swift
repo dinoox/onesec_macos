@@ -110,32 +110,43 @@ extension StatusView {
                 let element = AXElementAccessor.getFocusedElement()
                 let isEditable = element.map { AXElementAccessor.isEditableElement($0) } ?? false
 
-                // 尝试粘贴文本
-                if !isEditable {
-                    log.info("No focused editable element, attempting fallback paste")
+                // 1.
+                // 当前应用有焦点元素, 说明支持 AX
+                // 如果是可编辑的元素则直接粘贴, 否则弹窗
+                if element != nil {
+                    if isEditable {
+                        await AXPasteboardController.pasteTextToActiveApp(summary)
+                        return
+                    } else {
+                        ContentCard<EmptyView>.show(title: "识别结果", content: [summary])
+                        showTranslateOverlay(polishedText: polishedText)
+                    }
+                }
 
-                    if element == nil, await AXPasteboardController.whasTextInputFocus() {
-                        if processMode == .translate {
-                            showTranslateOverlay(polishedText: polishedText)
-                        }
+                // 2.
+                // 当前应用不支持 AX
+                // 首先根据白名单使用零宽字符复制测试方法
+                log.info("No focused editable element, attempting fallback paste")
+
+                if isAppShouldTestWithZeroWidthChar(ConnectionCenter.shared.currentRecordingAppContext.appInfo) {
+                    if await AXPasteboardController.whasTextInputFocus() {
                         await AXPasteboardController.pasteTextToActiveApp(summary)
                         return
                     }
-
-                    // TODO: 处理显示位置
-                    if recording.mode == .command {
-                        ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: [summary], cardWidth: 260, spacingX: 8, spacingY: 14)
-                    } else {
-                        ContentCard<EmptyView>.show(title: "识别结果", content: [summary])
-                    }
                     return
+                }
+
+                // TODO: 处理显示位置
+                if recording.mode == .command {
+                    ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: [summary], cardWidth: 260, spacingX: 8, spacingY: 14)
+                } else {
+                    ContentCard<EmptyView>.show(title: "识别结果", content: [summary])
                 }
 
                 log.info("Focused editable element found, pasting text")
                 if processMode == .translate {
                     showTranslateOverlay(polishedText: polishedText)
                 }
-                await AXPasteboardController.pasteTextAndCheckModification(summary, interactionID)
             }
         case let .terminalLinuxChoice(bundleID, appName, endpointIdentifier, commands):
             recording.state = .idle
