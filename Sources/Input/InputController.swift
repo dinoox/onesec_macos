@@ -93,7 +93,10 @@ class InputController {
         if type == .mouseMoved || type == .leftMouseDragged || type == .rightMouseDragged
             || type == .otherMouseDragged
         {
-            handleMouseEvent(event: event)
+            Task { @MainActor in
+                handleMouseEvent(event: event)
+            }
+
             return Unmanaged.passUnretained(event)
         }
 
@@ -103,17 +106,21 @@ class InputController {
 
         // 拦截快捷键的设置
         if keyEventProcessor.isHotkeySetting {
-            keyEventProcessor.handleHotkeySettingEvent(type: type, event: event)
+            Task { @MainActor in
+                keyEventProcessor.handleHotkeySettingEvent(type: type, event: event)
+            }
             return nil
         }
 
         // 正常处理按键监听
-        switch keyEventProcessor.handlekeyEvent(type: type, event: event) {
-        case let .startMatch(mode): startRecording(mode: mode)
-        case .endMatch: stopRecording()
-        case let .modeUpgrade(from, to): modeUpgrade(from: from, to: to)
-        case .throttled, .stillMatching, .notMatching:
-            break
+        Task { @MainActor in
+            switch keyEventProcessor.handlekeyEvent(type: type, event: event) {
+            case let .startMatch(mode): startRecording(mode: mode)
+            case .endMatch: stopRecording()
+            case let .modeUpgrade(from, to): modeUpgrade(from: from, to: to)
+            case .throttled, .stillMatching, .notMatching:
+                break
+            }
         }
 
         return Unmanaged.passUnretained(event)

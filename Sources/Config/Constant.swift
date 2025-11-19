@@ -15,6 +15,8 @@ func isTerminalAppWithoutAXSupport() -> Bool {
     return terminalAppsWithoutAXSupport.contains(appInfo.bundleID)
 }
 
+
+
 func isAppShouldTestWithZeroWidthChar() -> Bool {
     let appInfo = ConnectionCenter.shared.currentRecordingAppContext.appInfo
     return appShouldTestWithZeroWidthChar.contains(appInfo.bundleID)

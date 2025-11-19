@@ -134,9 +134,9 @@ class AXPasteboardController {
         let pasteboard = NSPasteboard.general
         let oldContents = pasteboard.string(forType: .string)
 
-        if await copyCurrentSelectionAndRestore() != nil {
-            return true
-        }
+        // if await copyCurrentSelectionAndRestore() != nil {
+        //     return true
+        // }
 
         pasteboard.clearContents()
         pasteboard.setString(testMarker, forType: .string)
@@ -152,7 +152,7 @@ class AXPasteboardController {
         // 当为选中文本时,  changeCount 依旧会改变
         // 所以这里判断当前复制的新内容是否为零宽字符
         let isZeroCharNotChange = pasteboard.string(forType: .string) == testMarker
-        simulateUndo()
+        // simulateUndo()
 
         defer { restorePasteboard(oldContents) }
 
