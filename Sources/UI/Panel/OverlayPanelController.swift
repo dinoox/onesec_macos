@@ -4,6 +4,8 @@ import SwiftUI
 
 enum PanelType {
     case translate
+    case command
+    case notification
 }
 
 @MainActor

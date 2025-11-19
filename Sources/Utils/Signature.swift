@@ -1,11 +1,10 @@
-import Foundation
 import CryptoKit
+import Foundation
 
-struct Signature {
+enum Signature {
     private static let secretKey = "1fp}fdSpYaj>7P;5b|HmTBF;OQmC"
-    
+
     static func generateSignature(params: [String: Any]) -> (sign: String, time: String) {
-        log.info("Params: \(params)")
         let timestamp = Int(Date().timeIntervalSince1970 * 1000)
         let sortedKeys = params.keys.sorted()
         var components = sortedKeys.map { "\($0)=\(params[$0] ?? "")" }
@@ -16,4 +15,3 @@ struct Signature {
         return (sign, String(timestamp))
     }
 }
-

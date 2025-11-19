@@ -141,9 +141,9 @@ extension StatusView {
 
                 if !canPaste {
                     if recording.mode == .command {
-                        ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: [summary], cardWidth: 260, spacingX: 8, spacingY: 14)
+                        ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: [summary], cardWidth: 260, spacingX: 8, spacingY: 14, panelType: .command)
                     } else {
-                        ContentCard<EmptyView>.show(title: "识别结果", content: [summary])
+                        ContentCard<EmptyView>.show(title: "识别结果", content: [summary], panelType: .notification)
                     }
                 }
             }
