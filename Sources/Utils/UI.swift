@@ -38,7 +38,7 @@ extension Color {
     }
 
     static var overlayPrimary: Color {
-        adaptive(light: .green, dark: Color(red: 245 / 255, green: 193 / 255, blue: 87 / 255))
+        adaptive(light: auroraGreen, dark: Color(red: 245 / 255, green: 193 / 255, blue: 87 / 255))
     }
 
     static var overlaySecondaryPrimary: Color {

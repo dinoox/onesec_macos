@@ -16,7 +16,7 @@ struct Spinner: View {
     var body: some View {
         Circle()
             .trim(from: 0, to: 0.7)
-            .stroke(color, style: StrokeStyle(lineWidth: 2, lineCap: .round))
+            .stroke(color, style: StrokeStyle(lineWidth: 1.5, lineCap: .round))
             .frame(width: size, height: size)
             .rotationEffect(.degrees(isAnimating ? 360 : 0))
             .onAppear {

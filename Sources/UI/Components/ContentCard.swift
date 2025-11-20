@@ -10,7 +10,7 @@ struct ActionButton {
 struct ContentCard<CustomContent: View>: View {
     let panelID: UUID
     let title: String
-    let content: [String]
+    let content: String
     let onTap: (() -> Void)?
     let actionButtons: [ActionButton]?
     let customContent: (() -> CustomContent)?
@@ -20,8 +20,6 @@ struct ContentCard<CustomContent: View>: View {
     private let maxContentHeight: CGFloat = 350
 
     @State private var isContentCopied = false
-    @State private var copiedContentIndex: Int? = nil
-    @State private var isContentCollapsed = false
     @State private var showBottomSection = true
     @State private var contentHeight: CGFloat = 0
     @State private var remainingSeconds = 12
@@ -31,10 +29,10 @@ struct ContentCard<CustomContent: View>: View {
     init(
         panelID: UUID,
         title: String,
-        content: [String] = [],
+        content: String = "",
         onTap: (() -> Void)? = nil,
         actionButtons: [ActionButton]? = nil,
-        cardWidth: CGFloat = 250,
+        cardWidth: CGFloat = 280,
         @ViewBuilder customContent: @escaping () -> CustomContent
     ) {
         self.panelID = panelID
@@ -60,60 +58,31 @@ struct ContentCard<CustomContent: View>: View {
             VStack(alignment: .leading, spacing: 8.5) {
                 HStack(spacing: 8) {
                     Text(title)
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.overlayText)
                         .lineLimit(1)
 
                     Spacer()
 
-                    Button(action: toggleContentCollapse) {
-                        Image.systemSymbol("chevron.up")
-                            .font(.system(size: 12, weight: .semibold))
-                            .rotationEffect(.degrees(isContentCollapsed ? 180 : 0))
-                            .animation(.spring, value: isContentCollapsed)
-                    }
-                    .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
-
                     Button(action: closeCard) {
                         Image.systemSymbol("xmark")
                             .font(.system(size: 12, weight: .semibold))
-                            .padding(.trailing, 2)
                     }
-                    .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
+                    .buttonStyle(HoverButtonStyle(normalColor: .overlayPlaceholder, hoverColor: .overlayText))
+                    .opacity(isHovering ? 1.0 : 0.0)
+                    .animation(.easeInOut(duration: 0.2), value: isHovering)
                 }
 
-                if !isContentCollapsed {
-                    if let customContent = customContent {
-                        customContent()
-                    } else {
-                        ScrollView(.vertical, showsIndicators: contentHeight > maxContentHeight) {
-                            VStack(alignment: .leading, spacing: content.count > 1 ? 12 : 0) {
-                                ForEach(content.indices, id: \.self) { index in
-                                    VStack(alignment: .leading, spacing: 10) {
-                                        Text(content[index])
-                                            .font(.system(size: 13, weight: .regular))
-                                            .foregroundColor(.overlaySecondaryText)
-                                            .lineSpacing(3.8)
-                                            .fixedSize(horizontal: false, vertical: true)
-                                            .frame(maxWidth: .infinity, alignment: .leading)
-
-                                        if content.count > 1 {
-                                            Button(action: { handleCopyContent(index: index) }) {
-                                                Text(copiedContentIndex == index ? "已复制" : "复制")
-                                                    .font(.system(size: 11, weight: .medium))
-                                                    .padding(.horizontal, 10)
-                                                    .padding(.vertical, 6)
-                                                    .overlay(
-                                                        RoundedRectangle(cornerRadius: 6)
-                                                            .stroke(Color.overlayBorder, lineWidth: 1)
-                                                    )
-                                            }
-                                            .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
-                                            .disabled(copiedContentIndex == index)
-                                        }
-                                    }
-                                }
-                            }
+                if let customContent = customContent {
+                    customContent()
+                } else {
+                    ScrollView(.vertical, showsIndicators: contentHeight > maxContentHeight) {
+                        Text(content)
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.overlaySecondaryText)
+                            .lineSpacing(3.8)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                             .background(
                                 GeometryReader { geometry in
                                     Color.clear.onAppear {
@@ -121,48 +90,26 @@ struct ContentCard<CustomContent: View>: View {
                                     }
                                 }
                             )
-                        }
-                        .frame(maxHeight: maxContentHeight)
                     }
+                    .frame(maxHeight: maxContentHeight)
+                }
 
-                    HStack {
-                        if let buttons = actionButtons, !buttons.isEmpty {
-                            HStack(spacing: 8) {
-                                ForEach(buttons.indices, id: \.self) { index in
-                                    Button(action: {
-                                        buttons[index].action()
-                                        if buttons[index].clickToClose {
-                                            closeCard()
-                                        }
-                                    }) {
-                                        Text(buttons[index].title)
-                                            .font(.system(size: 11, weight: .medium))
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 6)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .stroke(Color.overlayBorder, lineWidth: 1)
-                                            )
-                                    }
-                                    .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
-                                }
-                            }
-                        }
-                        Spacer()
+                HStack {
+                    Spacer()
+                    Button(action: handleCopyContent) {
+                        HStack(spacing: 4) {
+                            Image.systemSymbol(isContentCopied ? "checkmark" : "doc.on.doc")
+                                .font(.system(size: 12, weight: .semibold))
+                                .scaleEffect(isContentCopied ? 1.1 : 1.0)
+                                .animation(.quickSpringAnimation, value: isContentCopied).frame(height: 12)
 
-                        if content.count == 1 {
-                            Button(action: { handleCopyContent(index: 0) }) {
-                                Image.systemSymbol(isContentCopied ? "checkmark" : "doc.on.doc")
-                                    .font(.system(size: 12, weight: .semibold))
-                                    .scaleEffect(isContentCopied ? 1.1 : 1.0)
-                                    .animation(.quickSpringAnimation, value: isContentCopied)
-                            }
-                            .frame(width: 16, height: 16)
-                            .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
-                            .disabled(isContentCopied)
-                            .opacity(isContentCopied ? 0.5 : 1.0)
+                            Text("复制").font(.system(size: 12, weight: .semibold))
                         }
                     }
+                    .buttonStyle(HoverButtonStyle(normalColor: .overlayPlaceholder, hoverColor: .overlayText))
+                    .disabled(isContentCopied)
+                    .opacity(isHovering ? (isContentCopied ? 0.5 : 1.0) : 0.0)
+                    .animation(.easeInOut(duration: 0.2), value: isHovering)
                 }
             }
             .padding(.horizontal, 13)
@@ -170,46 +117,17 @@ struct ContentCard<CustomContent: View>: View {
 
             // Bottom Timer Tip
             if showBottomSection {
-                VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        Text("这条消息将在 ")
-                            .font(.system(size: 10.5))
-                            .foregroundColor(Color.overlaySecondaryText)
+                ZStack(alignment: .leading) {
+                    Rectangle()
+                        .fill(Color.overlayPrimary.opacity(0.3))
+                        .frame(height: 3.5)
 
-                        Text("\(remainingSeconds)")
-                            .font(.system(size: 10.5))
-                            .monospacedDigitIfAvailable()
-                            .fontWeight(.semibold)
-                            .foregroundColor(Color.overlaySecondaryText)
-
-                        Text(" 秒后自动关闭，")
-                            .font(.system(size: 10.5))
-                            .foregroundColor(Color.overlaySecondaryText)
-
-                        Button(action: closeTipsSection) {
-                            Text("点击停止")
-                                .font(.system(size: 10.5))
-                                .foregroundColor(Color.overlayText)
-                        }
-                        .buttonStyle(UnderlineButtonStyle())
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 13)
-                    .background(Color.overlaySecondaryBackground)
-
-                    ZStack(alignment: .leading) {
-                        Rectangle()
-                            .fill(Color.overlayPrimary.opacity(0.3))
-                            .frame(height: 3.5)
-
-                        Rectangle()
-                            .fill(Color.overlayPrimary)
-                            .frame(width: cardWidth * CGFloat(remainingSeconds) / CGFloat(autoCloseDuration), height: 3)
-                            .animation(.linear(duration: 1.0), value: remainingSeconds)
-                    }
-                    .frame(height: 3.5)
+                    Rectangle()
+                        .fill(Color.overlayPrimary)
+                        .frame(width: cardWidth * CGFloat(remainingSeconds) / CGFloat(autoCloseDuration), height: 3)
+                        .animation(.linear(duration: 1.0), value: remainingSeconds)
                 }
+                .frame(height: 3.5)
                 .transition(.move(edge: .bottom).combined(with: .opacity))
             }
         }
@@ -240,35 +158,19 @@ struct ContentCard<CustomContent: View>: View {
         }
     }
 
-    private func toggleContentCollapse() {
-        withAnimation(.springAnimation) {
-            isContentCollapsed.toggle()
-        }
-    }
-
-    private func handleCopyContent(index: Int) {
-        guard index < content.count else { return }
-
+    private func handleCopyContent() {
         let pasteboard = NSPasteboard.general
         pasteboard.clearContents()
-        pasteboard.setString(content[index], forType: .string)
+        pasteboard.setString(content, forType: .string)
 
         withAnimation {
-            if content.count == 1 {
-                isContentCopied = true
-            } else {
-                copiedContentIndex = index
-            }
+            isContentCopied = true
         }
 
         Task {
             try? await Task.sleep(nanoseconds: 3_000_000_000)
             withAnimation {
-                if content.count == 1 {
-                    isContentCopied = false
-                } else {
-                    copiedContentIndex = nil
-                }
+                isContentCopied = false
             }
         }
     }
@@ -303,7 +205,7 @@ extension ContentCard where CustomContent == EmptyView {
     init(
         panelID: UUID,
         title: String,
-        content: [String],
+        content: String,
         onTap: (() -> Void)? = nil,
         actionButtons: [ActionButton]? = nil,
         cardWidth: CGFloat = 250
@@ -319,13 +221,13 @@ extension ContentCard where CustomContent == EmptyView {
 }
 
 extension ContentCard {
-    static func show(title: String, content: [String], onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250, spacingX: CGFloat = 0, spacingY: CGFloat = 0, panelType: PanelType? = nil) {
+    static func show(title: String, content: String, onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250, spacingX: CGFloat = 0, spacingY: CGFloat = 0, panelType: PanelType? = nil) {
         OverlayController.shared.showOverlay(content: { panelID in
             ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons, cardWidth: cardWidth)
         }, spacingX: spacingX, spacingY: spacingY, panelType: panelType)
     }
 
-    static func showAboveSelection(title: String, content: [String], onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250, spacingX: CGFloat = 0, spacingY: CGFloat = 0, panelType: PanelType? = nil) {
+    static func showAboveSelection(title: String, content: String, onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250, spacingX: CGFloat = 0, spacingY: CGFloat = 0, panelType: PanelType? = nil) {
         OverlayController.shared.showOverlayAboveSelection(content: { panelID in
             ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons, cardWidth: cardWidth)
         }, spacingX: spacingX, spacingY: spacingY, panelType: panelType)

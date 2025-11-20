@@ -116,7 +116,7 @@ struct StatusIndicator: View {
 
             // 外圆
             RoundedRectangle(cornerRadius: baseSize / 2)
-                .strokeBorder(borderColor, lineWidth: 1.2)
+                .strokeBorder(borderColor, lineWidth: 1)
                 .frame(width: outerWidth, height: baseSize)
                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: outerWidth)
 

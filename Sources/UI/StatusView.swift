@@ -73,7 +73,7 @@ extension StatusView {
                 autoHide: autoHide,
             )
         case let .hotWordAddRequested(word):
-            ContentCard<EmptyView>.show(title: "热词添加", content: ["检测到热词 \"\(word)\", 是否添加到词库？"], actionButtons: [
+            ContentCard<EmptyView>.show(title: "热词添加", content: "检测到热词 \"\(word)\", 是否添加到词库？", actionButtons: [
                 ActionButton(title: "添加") {
                     Task { @MainActor in
                         do {
@@ -132,18 +132,18 @@ extension StatusView {
 
                 if processMode == .translate {
                     if canPaste {
-                        ContentCard<EmptyView>.showAboveSelection(title: "输入原文", content: [polishedText], onTap: nil, actionButtons: nil, cardWidth: 260, spacingX: 8, spacingY: 14, panelType: .translate)
+                        ContentCard<EmptyView>.showAboveSelection(title: "输入原文", content: polishedText, onTap: nil, actionButtons: nil, cardWidth: 260, spacingX: 8, spacingY: 14, panelType: .translate)
                     } else {
-                        ContentCard<EmptyView>.show(title: "识别结果", content: [polishedText, summary], panelType: .translate)
+                        ContentCard<EmptyView>.show(title: "识别结果", content: polishedText, panelType: .translate)
                     }
                     return
                 }
 
                 if !canPaste {
                     if recording.mode == .command {
-                        ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: [summary], cardWidth: 260, spacingX: 8, spacingY: 14, panelType: .command)
+                        ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: summary, cardWidth: 260, spacingX: 8, spacingY: 14, panelType: .command)
                     } else {
-                        ContentCard<EmptyView>.show(title: "识别结果", content: [summary], panelType: .notification)
+                        ContentCard<EmptyView>.show(title: "识别结果", content: summary, panelType: .notification)
                     }
                 }
             }

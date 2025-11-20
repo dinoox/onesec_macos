@@ -21,14 +21,13 @@ struct LazyTranslationCard: View {
     let onTap: (() -> Void)?
     let actionButtons: [ActionButton]?
     let cardWidth: CGFloat
-    let initialCompactMode: Bool
     let expandDirection: ExpandDirection
 
     private let autoCloseDuration = 12
     private let compactSize: CGFloat = 25
+    private let maxContentHeight: CGFloat = 350
 
     @State private var isContentCopied = false
-    @State private var isContentCollapsed = false
     @State private var showBottomSection = true
     @State private var remainingSeconds = 12
     @State private var timerTask: Task<Void, Never>?
@@ -37,6 +36,7 @@ struct LazyTranslationCard: View {
     @State private var isLoading = false
     @State private var translationResult: TranslationResult? = nil
     @State private var errorMessage: String? = nil
+    @State private var contentHeight: CGFloat = 0
 
     init(
         panelID: UUID,
@@ -54,16 +54,12 @@ struct LazyTranslationCard: View {
         self.onTap = onTap
         self.actionButtons = actionButtons
         self.cardWidth = cardWidth
-        initialCompactMode = isCompactMode
         self.expandDirection = expandDirection
         _isExpanded = State(initialValue: !isCompactMode)
     }
 
     var body: some View {
         VStack {
-            // if expandDirection == .down {
-            //     Spacer()
-            // }
             if !isExpanded {
                 compactView
                     .transition(.scale(scale: 0.1, anchor: expandDirection == .up ? .bottom : .top).combined(with: .opacity))
@@ -72,9 +68,6 @@ struct LazyTranslationCard: View {
                     .transition(.scale(scale: 0.1, anchor: expandDirection == .up ? .bottom : .top).combined(with: .opacity))
                     .frame(width: cardWidth)
             }
-            // if expandDirection == .up {
-            //     Spacer()
-            // }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: expandDirection == .down ? .top : .bottom)
         // .frame(width: isExpanded ? cardWidth : compactSize, alignment: .bottom)
@@ -119,99 +112,88 @@ struct LazyTranslationCard: View {
             VStack(alignment: .leading, spacing: 8.5) {
                 HStack(spacing: 8) {
                     Text(title)
-                        .font(.system(size: 13, weight: .regular))
+                        .font(.system(size: 14, weight: .regular))
                         .foregroundColor(.overlayText)
                         .lineLimit(1)
 
                     Spacer()
-
-                    Button(action: toggleContentCollapse) {
-                        Image.systemSymbol("chevron.up")
-                            .font(.system(size: 12, weight: .semibold))
-                            .rotationEffect(.degrees(isContentCollapsed ? 180 : 0))
-                            .animation(.spring, value: isContentCollapsed)
-                    }
-                    .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
-
                     Button(action: closeCard) {
                         Image.systemSymbol("xmark")
                             .font(.system(size: 12, weight: .semibold))
                             .padding(.trailing, 2)
                     }
-                    .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
+                    .buttonStyle(HoverButtonStyle(normalColor: .overlayPlaceholder, hoverColor: .overlayText))
+                    .opacity(isHovering ? 1.0 : 0.0)
+                    .animation(.easeInOut(duration: 0.2), value: isHovering)
                 }
 
-                if !isContentCollapsed {
-                    VStack(alignment: .leading, spacing: 12) {
-                        if isLoading {
-                            HStack {
-                                Spinner(color: .overlaySecondaryText, size: 12)
-                                Text("翻译中...")
-                                    .font(.system(size: 13, weight: .regular))
-                                    .foregroundColor(.overlaySecondaryText)
-                            }
-                        } else if let error = errorMessage {
-                            Text(error)
-                                .font(.system(size: 13, weight: .regular))
-                                .foregroundColor(.red)
-                                .lineSpacing(3.8)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        } else if let result = translationResult {
+                VStack(alignment: .leading, spacing: 12) {
+                    if isLoading {
+                        HStack {
+                            Spinner(color: .overlaySecondaryText, size: 12)
+                            Text("翻译中...")
+                                .font(.system(size: 13.5, weight: .regular))
+                                .foregroundColor(.overlaySecondaryText)
+                        }
+                    } else if let error = errorMessage {
+                        Text(error)
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.red)
+                            .lineSpacing(3.8)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    } else if let result = translationResult {
+                        // 内容区
+                        // ScrollView(.vertical, showsIndicators: contentHeight > maxContentHeight) {
                             VStack(alignment: .leading, spacing: 10) {
                                 Text(result.translatedText)
-                                    .font(.system(size: 13, weight: .regular))
+                                    .font(.system(size: 13.5, weight: .regular))
                                     .foregroundColor(.overlaySecondaryText)
                                     .lineSpacing(3.8)
                                     .fixedSize(horizontal: false, vertical: true)
                                     .frame(maxWidth: .infinity, alignment: .leading)
                             }
-                        } else {
-                            Text(content)
-                                .font(.system(size: 13, weight: .regular))
-                                .foregroundColor(.overlaySecondaryText)
-                                .lineSpacing(3.8)
-                                .fixedSize(horizontal: false, vertical: true)
-                                .frame(maxWidth: .infinity, alignment: .leading)
-                        }
-                    }
-                    HStack {
-                        if let buttons = actionButtons, !buttons.isEmpty {
-                            HStack(spacing: 8) {
-                                ForEach(buttons.indices, id: \.self) { index in
-                                    Button(action: {
-                                        buttons[index].action()
-                                        if buttons[index].clickToClose {
-                                            closeCard()
-                                        }
-                                    }) {
-                                        Text(buttons[index].title)
-                                            .font(.system(size: 11, weight: .medium))
-                                            .padding(.horizontal, 10)
-                                            .padding(.vertical, 6)
-                                            .overlay(
-                                                RoundedRectangle(cornerRadius: 6)
-                                                    .stroke(Color.overlayBorder, lineWidth: 1)
-                                            )
+                            .background(
+                                GeometryReader { geometry in
+                                    Color.clear.onAppear {
+                                        contentHeight = geometry.size.height
+                                        log.info("contentHeight: \(contentHeight)")
                                     }
-                                    .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
+                                    .onChange(of: geometry.size.height) { newHeight in
+                                        contentHeight = newHeight
+                                    }
                                 }
-                            }
-                        }
-                        Spacer()
+                            )
+                        // }
+                        // .frame(maxHeight: min(contentHeight, maxContentHeight))
+                    } else {
+                        Text(content)
+                            .font(.system(size: 13.5, weight: .regular))
+                            .foregroundColor(.overlaySecondaryText)
+                            .lineSpacing(3.8)
+                            .fixedSize(horizontal: false, vertical: true)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
 
-                        if let result = translationResult {
-                            Button(action: { handleCopyTranslation(text: result.translatedText) }) {
+                HStack {
+                    Spacer()
+
+                    if let result = translationResult {
+                        Button(action: { handleCopyTranslation(text: result.translatedText) }) {
+                            HStack(spacing: 4) {
                                 Image.systemSymbol(isContentCopied ? "checkmark" : "doc.on.doc")
                                     .font(.system(size: 12, weight: .semibold))
                                     .scaleEffect(isContentCopied ? 1.1 : 1.0)
-                                    .animation(.quickSpringAnimation, value: isContentCopied)
+                                    .animation(.quickSpringAnimation, value: isContentCopied).frame(height: 12)
+
+                                Text("复制").font(.system(size: 12, weight: .semibold))
                             }
-                            .frame(width: 16, height: 16)
-                            .buttonStyle(HoverButtonStyle(normalColor: .overlaySecondaryText, hoverColor: .overlayText))
-                            .disabled(isContentCopied)
-                            .opacity(isContentCopied ? 0.5 : 1.0)
                         }
+                        .buttonStyle(HoverButtonStyle(normalColor: .overlayPlaceholder, hoverColor: .overlayText))
+                        .disabled(isContentCopied)
+                        .opacity(isHovering ? (isContentCopied ? 0.5 : 1.0) : 0.0)
+                        .animation(.easeInOut(duration: 0.2), value: isHovering)
                     }
                 }
             }
@@ -221,33 +203,6 @@ struct LazyTranslationCard: View {
             // Bottom Timer Tip
             if showBottomSection {
                 VStack(spacing: 0) {
-                    HStack(spacing: 0) {
-                        Text("这条消息将在 ")
-                            .font(.system(size: 10.5))
-                            .foregroundColor(Color.overlaySecondaryText)
-
-                        Text("\(remainingSeconds)")
-                            .font(.system(size: 10.5))
-                            .monospacedDigitIfAvailable()
-                            .fontWeight(.semibold)
-                            .foregroundColor(Color.overlaySecondaryText)
-
-                        Text(" 秒后自动关闭，")
-                            .font(.system(size: 10.5))
-                            .foregroundColor(Color.overlaySecondaryText)
-
-                        Button(action: closeTipsSection) {
-                            Text("点击停止")
-                                .font(.system(size: 10.5))
-                                .foregroundColor(Color.overlayText)
-                        }
-                        .buttonStyle(UnderlineButtonStyle())
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 6)
-                    .padding(.horizontal, 13)
-                    .background(Color.overlaySecondaryBackground)
-
                     ZStack(alignment: .leading) {
                         Rectangle()
                             .fill(Color.overlayPrimary.opacity(0.3))
@@ -290,12 +245,6 @@ struct LazyTranslationCard: View {
         stopAutoCloseTimer()
         withAnimation(.springAnimation) {
             showBottomSection = false
-        }
-    }
-
-    private func toggleContentCollapse() {
-        withAnimation(.springAnimation) {
-            isContentCollapsed.toggle()
         }
     }
 
