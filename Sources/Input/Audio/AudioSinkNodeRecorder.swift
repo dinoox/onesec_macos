@@ -273,9 +273,6 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     }
 
     func resetState() {
-        lock.lock()
-        defer { lock.unlock() }
-
         // 重置状态
         recordState = .idle
         audioEngine.stop()
@@ -349,13 +346,13 @@ extension AudioSinkNodeRecorder {
                     if self?.recordState == .processing {
                         self?.resetState()
                     }
-
                 case .notificationReceived(.serverTimeout),
-                     .notificationReceived(.serverUnavailable),
                      .notificationReceived(.recordingTimeout):
                     self?.recordState = .recordingTimeout
                     self?.resetState()
-
+                case .notificationReceived(.serverUnavailable):
+                    log.error("Server unavailable, stop recording")
+                    self?.stopRecording()
                 default:
                     break
                 }
