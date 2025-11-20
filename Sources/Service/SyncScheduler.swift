@@ -61,7 +61,7 @@ class SyncScheduler {
         }
 
         self.scheduler = scheduler
-        log.info("Scheduled next sync task, interval: \(delayInterval) seconds")
+        log.info("Scheduled next sync task, interval: \(delayInterval.rounded()) seconds")
     }
 
     private func performSync() {

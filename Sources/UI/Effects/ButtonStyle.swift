@@ -21,6 +21,26 @@ struct HoverButtonStyle: ButtonStyle {
     }
 }
 
+struct HoverIconButtonStyle: ButtonStyle {
+    let normalColor: Color
+    let hoverColor: Color
+    @State private var isHovered = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundColor(isHovered ? hoverColor : normalColor)
+            .animation(.quickSpringAnimation, value: isHovered)
+            .onHover { hovering in
+                isHovered = hovering
+                if hovering {
+                    NSCursor.pointingHand.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+    }
+}
+
 struct UnderlineButtonStyle: ButtonStyle {
     @State private var isHovered = false
 

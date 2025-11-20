@@ -70,7 +70,7 @@ struct ContentCard<CustomContent: View>: View {
                         Image.systemSymbol("xmark")
                             .font(.system(size: 12, weight: .semibold))
                     }
-                    .buttonStyle(HoverButtonStyle(normalColor: .overlayPlaceholder, hoverColor: .overlayText))
+                    .buttonStyle(HoverIconButtonStyle(normalColor: .overlayPlaceholder, hoverColor: .overlayText))
                     .opacity(isHovering ? 1.0 : 0.0)
                     .animation(.easeInOut(duration: 0.2), value: isHovering)
                 }
@@ -115,7 +115,7 @@ struct ContentCard<CustomContent: View>: View {
                                 Text("复制").font(.system(size: 12, weight: .semibold))
                             }
                         }
-                        .buttonStyle(HoverButtonStyle(normalColor: .overlayPlaceholder, hoverColor: .overlayText))
+                        .buttonStyle(HoverIconButtonStyle(normalColor: .overlayPlaceholder, hoverColor: .overlayText))
                         .disabled(isContentCopied)
                         .opacity(isHovering ? (isContentCopied ? 0.5 : 1.0) : 0.0)
                         .animation(.easeInOut(duration: 0.2), value: isHovering)
