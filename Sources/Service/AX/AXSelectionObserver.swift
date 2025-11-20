@@ -61,7 +61,8 @@ class AXSelectionObserver {
         // 系统更新焦点元素需要时间
         Task {
             try? await Task.sleep(nanoseconds: 200_000_000) // 200ms
-            self.tryEnableManualAccessibility(app: app, retryCount: 5)
+            self.tryActivateAppAccessibility(app: app, attribute: "AXManualAccessibility", retryCount: 5)
+            self.tryActivateAppAccessibility(app: app, attribute: "AXEnhancedUserInterface", retryCount: 5)
             self.tryAddNotificationsForFocusedElement(app: app, retryCount: 5)
         }
     }
@@ -104,17 +105,17 @@ extension AXSelectionObserver {
         }
     }
 
-    private func tryEnableManualAccessibility(app: NSRunningApplication, retryCount: Int = 0) {
+    private func tryActivateAppAccessibility(app: NSRunningApplication, attribute: String, retryCount: Int = 0) {
         if AXUIElementSetAttributeValue(
             AXUIElementCreateApplication(app.processIdentifier),
-            "AXManualAccessibility" as CFString,
+            attribute as CFString,
             kCFBooleanTrue
         ) == .success {
-            log.info("AXManualAccessibility success for app \(app.localizedName ?? "Unknown")")
+            log.info("\(attribute) success for app \(app.localizedName ?? "Unknown")")
         } else if retryCount > 0 {
             Task {
                 try? await Task.sleep(nanoseconds: 100_000_000) // 100ms
-                tryEnableManualAccessibility(app: app, retryCount: retryCount - 1)
+                tryActivateAppAccessibility(app: app, attribute: attribute, retryCount: retryCount - 1)
             }
         }
     }

@@ -35,9 +35,7 @@ class AXTranslationAccessor {
                 let mouseUpPoint = NSEvent.mouseLocation
                 let distance = sqrt(pow(mouseUpPoint.x - downPoint.x, 2) + pow(mouseUpPoint.y - downPoint.y, 2))
 
-                // let font = NSFont.systemFont(ofSize: NSFont.systemFontSize)
-                // let twoChineseWidth = ("中" as NSString).size(withAttributes: [.font: font]).width * 2
-
+                // 25 约为两个中文字符宽度
                 guard distance > 25 else {
                     reset()
                     return

@@ -81,7 +81,7 @@ class InputController {
         return CGEventMask(eventMask)
     }
 
-    private func handleCGEvent(proxy _: CGEventTapProxy, type: CGEventType, event: CGEvent)
+    private func handleCGEvent(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent)
         -> Unmanaged<CGEvent>?
     {
         guard type != .tapDisabledByTimeout else {
@@ -89,41 +89,40 @@ class InputController {
             return Unmanaged.passUnretained(event)
         }
 
-        // 处理鼠标移动事件
-        if type == .mouseMoved || type == .leftMouseDragged || type == .rightMouseDragged
-            || type == .otherMouseDragged
-        {
-            Task { @MainActor in
-                handleMouseEvent(event: event)
-            }
-
-            return Unmanaged.passUnretained(event)
-        }
-
         guard event.getIntegerValueField(.keyboardEventAutorepeat) == 0 else {
             return Unmanaged.passUnretained(event)
         }
 
-        // 拦截快捷键的设置
-        if keyEventProcessor.isHotkeySetting {
-            Task { @MainActor in
-                keyEventProcessor.handleHotkeySettingEvent(type: type, event: event)
-            }
-            return nil
-        }
-
-        // 正常处理按键监听
-        Task { @MainActor in
-            switch keyEventProcessor.handlekeyEvent(type: type, event: event) {
-            case let .startMatch(mode): startRecording(mode: mode)
-            case .endMatch: stopRecording()
-            case let .modeUpgrade(from, to): modeUpgrade(from: from, to: to)
-            case .throttled, .stillMatching, .notMatching:
-                break
-            }
+        Task.detached(priority: .userInitiated) { [weak self] in
+            self?.handleCGEventInternal(proxy: proxy, type: type, event: event)
         }
 
         return Unmanaged.passUnretained(event)
+    }
+
+    private func handleCGEventInternal(proxy _: CGEventTapProxy, type: CGEventType, event: CGEvent) {
+        // 处理鼠标移动事件
+        if type == .mouseMoved || type == .leftMouseDragged || type == .rightMouseDragged
+            || type == .otherMouseDragged
+        {
+            handleMouseEvent(event: event)
+            return
+        }
+
+        // 拦截快捷键的设置
+        if keyEventProcessor.isHotkeySetting {
+            keyEventProcessor.handleHotkeySettingEvent(type: type, event: event)
+            return
+        }
+
+        // 正常处理按键监听
+        switch keyEventProcessor.handlekeyEvent(type: type, event: event) {
+        case let .startMatch(mode): startRecording(mode: mode)
+        case .endMatch: stopRecording()
+        case let .modeUpgrade(from, to): modeUpgrade(from: from, to: to)
+        case .throttled, .stillMatching, .notMatching:
+            break
+        }
     }
 
     /// 处理鼠标移动事件，检测屏幕切换

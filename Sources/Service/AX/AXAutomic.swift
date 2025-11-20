@@ -29,7 +29,6 @@ class AXAtomic {
     }
 
     static func getCursorPositionInCocoa() -> NSPoint? {
-        log.info("getCursorPositionInCocoa")
         guard let position = getCursorPosition() else {
             return nil
         }
