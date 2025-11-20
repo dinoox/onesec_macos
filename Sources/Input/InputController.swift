@@ -17,6 +17,8 @@ class InputController {
 
     /// 事件监听器
     private var eventTap: CFMachPort?
+    private let eventQueue = DispatchQueue(label: "com.onesec.inputcontroller", qos: .userInteractive)
+
     /// 运行循环源
     private var runLoopSource: CFRunLoopSource?
     private var runLoop: CFRunLoop?
@@ -93,7 +95,7 @@ class InputController {
             return Unmanaged.passUnretained(event)
         }
 
-        Task.detached(priority: .userInitiated) { [weak self] in
+        eventQueue.async { [weak self] in
             self?.handleCGEventInternal(proxy: proxy, type: type, event: event)
         }
 
