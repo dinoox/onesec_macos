@@ -32,7 +32,7 @@ struct ContentCard<CustomContent: View>: View {
         content: String = "",
         onTap: (() -> Void)? = nil,
         actionButtons: [ActionButton]? = nil,
-        cardWidth: CGFloat = 280,
+        cardWidth: CGFloat = 300,
         @ViewBuilder customContent: @escaping () -> CustomContent
     ) {
         self.panelID = panelID
@@ -54,8 +54,8 @@ struct ContentCard<CustomContent: View>: View {
 
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Top Title Bar
             VStack(alignment: .leading, spacing: 8.5) {
+                // Title Bar
                 HStack(spacing: 8) {
                     Text(title)
                         .font(.system(size: 14, weight: .regular))
@@ -72,7 +72,15 @@ struct ContentCard<CustomContent: View>: View {
                     .opacity(isHovering ? 1.0 : 0.0)
                     .animation(.easeInOut(duration: 0.2), value: isHovering)
                 }
+                .padding(.bottom, 8.5)
+                .overlay(
+                    Rectangle()
+                        .fill(Color.overlayBorder.opacity(0.5))
+                        .frame(height: 1.2).padding(.horizontal, -13),
+                    alignment: .bottom
+                )
 
+                // Content
                 if let customContent = customContent {
                     customContent()
                 } else {
@@ -94,6 +102,7 @@ struct ContentCard<CustomContent: View>: View {
                     .frame(maxHeight: maxContentHeight)
                 }
 
+                // Footer
                 HStack {
                     Spacer()
                     Button(action: handleCopyContent) {

@@ -1,5 +1,5 @@
-import SwiftUI
 import Combine
+import SwiftUI
 
 struct RecordingState {
     var volume: CGFloat = 0 // 音量值 (0-1)
@@ -18,7 +18,6 @@ struct StatusIndicator: View {
 
     let minInnerRatio: CGFloat = 0.2 // 内圆最小为外圆的20%
     let maxInnerRatio: CGFloat = 0.7 // 内圆最大为外圆的70%
-    let expandToCapsule: Bool = false // 控制是否在 recording/processing 时扩张为胶囊型
 
     private let overlay = OverlayController.shared
     @State private var isHovered: Bool = false
@@ -30,32 +29,19 @@ struct StatusIndicator: View {
     }
 
     // 基准大小
-    private let baseSize: CGFloat = 20
-
-    // 是否应该显示胶囊形
-    private var shouldShowCapsule: Bool {
-        expandToCapsule && (recordState == .recording || recordState == .processing)
-    }
-
-    // 外圆宽度 (胶囊模式下横向扩展)
-    private var outerWidth: CGFloat {
-        shouldShowCapsule ? baseSize * 1.8 : baseSize
-    }
-
-    // 外圆缩放比例
-    private var outerScale: CGFloat {
+    private var baseSize: CGFloat {
         switch recordState {
         case .idle:
-            1.0
+            20
         case .recording, .processing:
-            expandToCapsule ? 1.25 : 1.25
+            25
         default:
-            1.0
+            20
         }
     }
 
     private var innerSize: CGFloat {
-        let ratio = minInnerRatio + (maxInnerRatio - minInnerRatio) * volume
+        let ratio = minInnerRatio + (maxInnerRatio - minInnerRatio) * min(volume * 2.0, 1.0)
         return baseSize * ratio
     }
 
@@ -72,18 +58,6 @@ struct StatusIndicator: View {
             return Color.black
         default:
             return Color.clear
-        }
-    }
-
-    // 边框颜色
-    private var borderColor: Color {
-        switch recordState {
-        case .idle:
-            borderGrey
-        case .recording:
-            borderGrey
-        default:
-            modeColor.opacity(0.5)
         }
     }
 
@@ -110,15 +84,15 @@ struct StatusIndicator: View {
             // 外圆背景
             RoundedRectangle(cornerRadius: baseSize / 2)
                 .fill(outerBackgroundColor)
-                .frame(width: outerWidth, height: baseSize)
+                .frame(width: baseSize, height: baseSize)
                 .animation(.spring(response: 0.3, dampingFraction: 0.6), value: isHovered)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: outerWidth)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: baseSize)
 
             // 外圆
             RoundedRectangle(cornerRadius: baseSize / 2)
-                .strokeBorder(borderColor, lineWidth: 1)
-                .frame(width: outerWidth, height: baseSize)
-                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: outerWidth)
+                .strokeBorder(borderGrey, lineWidth: 1)
+                .frame(width: baseSize, height: baseSize)
+                .animation(.spring(response: 0.3, dampingFraction: 0.6), value: baseSize)
 
             // 内圆
             Group {
@@ -139,20 +113,19 @@ struct StatusIndicator: View {
                 } else if recordState == .processing {
                     Spinner(
                         color: modeColor,
-                        size: 10,
+                        size: baseSize / 2,
                     )
                 }
             }
             .animation(.quickSpringAnimation, value: innerSize)
         }
         .frame(width: baseSize, height: baseSize)
-        .scaleEffect(outerScale, anchor: .bottom)
         .scaleEffect(isHovered ? 1.5 : 1.0, anchor: .bottom)
         .offset(y: recordState == .idle ? 0 : -4)
-        .shadow(color: Color.black.opacity(0.3), radius: 12, x: 0, y: 2)
+        .shadow(color: .overlayBackground.opacity(0.2), radius: 6, x: 0, y: 0)
         .animation(.quickSpringAnimation, value: isHovered)
         .animation(.quickSpringAnimation, value: recordState)
-        .animation(.quickSpringAnimation, value: outerScale)
+        .animation(.quickSpringAnimation, value: baseSize)
         .onHover { hovering in
             guard ConnectionCenter.shared.audioRecorderState == .idle else { return }
             StatusPanelManager.shared.ignoresMouseEvents(ignore: !hovering)
