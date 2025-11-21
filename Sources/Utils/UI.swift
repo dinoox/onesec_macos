@@ -76,7 +76,7 @@ extension Color {
 
     /// Overlay 次要文本：带透明度
     static var overlaySecondaryText: Color {
-        adaptive(light: Color(red: 112 / 255, green: 112 / 255, blue: 112 / 255), dark: Color(red: 140 / 255, green: 140 / 255, blue: 140 / 255))
+        adaptive(light: Color(red: 112 / 255, green: 112 / 255, blue: 112 / 255), dark: Color(red: 160 / 255, green: 160 / 255, blue: 160 / 255))
     }
 
     /// Overlay 占位文本：更淡的颜色
