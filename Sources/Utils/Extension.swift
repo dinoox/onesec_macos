@@ -30,3 +30,14 @@ extension Text {
         }
     }
 }
+
+extension View {
+    @ViewBuilder
+    func tryScrollDisabled(_ disabled: Bool) -> some View {
+        if #available(macOS 13.0, *) {
+            self.scrollDisabled(disabled)
+        } else {
+            self
+        }
+    }
+}

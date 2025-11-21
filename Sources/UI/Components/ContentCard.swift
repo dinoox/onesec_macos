@@ -98,6 +98,7 @@ struct ContentCard<CustomContent: View>: View {
                                 }
                             )
                     }
+                    .tryScrollDisabled(contentHeight <= maxContentHeight)
                     .frame(maxHeight: maxContentHeight)
                 }
 

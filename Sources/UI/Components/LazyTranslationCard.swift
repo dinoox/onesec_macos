@@ -171,6 +171,7 @@ struct LazyTranslationCard: View {
                             maxHeight: maxContentHeight,
                             alignment: .top
                         )
+                        .tryScrollDisabled(contentHeight <= maxContentHeight)
                         .onPreferenceChange(ContentHeightKey.self) { contentHeight = $0 }
                         .transition(.opacity)
                     } else {
