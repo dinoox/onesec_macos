@@ -97,55 +97,43 @@ extension StatusView {
 
             Task {
                 var canPaste = false
-                let element = AXElementAccessor.getFocusedElement()
-                let isEditable = element.map { AXElementAccessor.isEditableElement($0) } ?? false
 
                 // 1.
-                // 当前应用有焦点元素, 说明支持 AX
-                // 如果是可编辑的元素则直接粘贴, 否则弹窗
-                if element != nil, !isAppWithoutAXSupport() {
-                    if isEditable {
-                        canPaste = true
-                        await AXPasteboardController.pasteTextToActiveApp(summary)
-                    }
-                }
-
-                // 2.
-                // 当前应用不支持 AX
                 // 首先根据白名单使用零宽字符复制测试方法
-                if !canPaste, isAppShouldTestWithZeroWidthChar() {
-                    log.info("No focused editable element, attempting zero width char paste test")
+                if isAppShouldTestWithZeroWidthChar() {
+                    log.info("Use zero width char paste test")
                     if await AXPasteboardController.whasTextInputFocus() {
                         canPaste = true
                         await AXPasteboardController.pasteTextToActiveApp(summary)
                     }
-                }
 
-                // 3.
-                // 使用粘贴探针检测是否可以粘贴
-                if !canPaste {
-                    log.info("Zero char paste test failed, using paste probe")
-                    canPaste = await AXPasteProbe.runPasteProbe(summary)
-                }
-
-                log.info("canPaste: \(canPaste)")
-
-                if processMode == .translate {
-                    if canPaste {
-                        ContentCard<EmptyView>.showAboveSelection(title: "输入原文", content: polishedText, onTap: nil, actionButtons: nil, cardWidth: 260, spacingX: 8, spacingY: 14, panelType: .translate)
-                    } else {
-                        ContentCard<EmptyView>.show(title: "识别结果", content: polishedText, panelType: .translate)
-                    }
+                    handleAlert(canPaste: canPaste, processMode: processMode, summary: summary, polishedText: polishedText)
                     return
                 }
 
-                if !canPaste {
-                    if recording.mode == .command {
-                        ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: summary, cardWidth: 260, spacingX: 8, spacingY: 14, panelType: .command)
-                    } else {
-                        ContentCard<EmptyView>.show(title: "识别结果", content: summary, panelType: .notification)
+                // 2.
+                // 当前应用有焦点元素, 说明支持 AX
+                // 如果是可编辑的元素则直接粘贴, 否则弹窗
+                let element = AXElementAccessor.getFocusedElement()
+                let isEditable = element.map { AXElementAccessor.isEditableElement($0) } ?? false
+
+                if element != nil, !isAppWithoutAXSupport() {
+                    log.info("Use AX paste test")
+                    if isEditable {
+                        canPaste = true
+                        await AXPasteboardController.pasteTextToActiveApp(summary)
                     }
+
+                    handleAlert(canPaste: canPaste, processMode: processMode, summary: summary, polishedText: polishedText)
+                    return
                 }
+
+                // 3.
+                // 对于 AX 黑名单应用
+                // 使用粘贴探针检测是否可以粘贴
+                log.info("Fallback to paste probe")
+                canPaste = await AXPasteProbe.runPasteProbe(summary)
+                handleAlert(canPaste: canPaste, processMode: processMode, summary: summary, polishedText: polishedText)
             }
         case let .terminalLinuxChoice(bundleID, appName, endpointIdentifier, commands):
             recording.state = .idle
@@ -153,6 +141,27 @@ extension StatusView {
             LinuxCommandChoiceCard.show(commands: commands, bundleID: bundleID, appName: appName, endpointIdentifier: endpointIdentifier)
         default:
             break
+        }
+    }
+
+    private func handleAlert(canPaste: Bool, processMode: TextProcessMode, summary: String, polishedText: String) {
+        if canPaste {
+            if processMode == .translate {
+                ContentCard<EmptyView>.showAboveSelection(title: "输入原文", content: polishedText, onTap: nil, actionButtons: nil, cardWidth: 260, spacingX: 8, spacingY: 14, panelType: .translate)
+            }
+        } else {
+            if processMode == .translate {
+                MultiContentCard.show(title: "识别结果", items: [
+                    ContentItem(title: "原文", content: polishedText),
+                    ContentItem(title: "译文", content: summary),
+                ], panelType: .translate)
+                return
+            }
+            if recording.mode == .command {
+                ContentCard<EmptyView>.showAboveSelection(title: "处理结果", content: summary, cardWidth: 260, spacingX: 8, spacingY: 14, panelType: .command)
+            } else {
+                ContentCard<EmptyView>.show(title: "识别结果", content: summary, panelType: .notification)
+            }
         }
     }
 
