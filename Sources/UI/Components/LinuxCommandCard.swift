@@ -113,6 +113,8 @@ struct CommandItem: View {
         OverlayController.shared.hideOverlay(uuid: panelID)
 
         Task { @MainActor in
+            NSApp.deactivate()
+
             var response: HTTPResponse!
             do {
                 if isChoiceMode {

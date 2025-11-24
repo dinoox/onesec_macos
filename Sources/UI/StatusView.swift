@@ -92,7 +92,8 @@ extension StatusView {
         case let .serverResultReceived(summary, _, processMode, polishedText):
             recording.state = .idle
             let textWidth = getTextWidth(text: summary)
-
+            LinuxCommandCard.show(commands: [LinuxCommand(distro: "", command: summary, displayName: "")])
+            return;
             if summary.isEmpty {
                 return
             }
