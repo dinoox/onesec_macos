@@ -18,13 +18,13 @@ class OverlayController {
     static let shared = OverlayController()
 
     private var panels: [UUID: NSPanel] = [:]
-    private let shadowPadding: CGFloat = 50
+    private let shadowPadding: CGFloat = 40
     private let statusBarHeight: CGFloat = 36
     private let defaultSpacing: CGFloat = 4
 
     @discardableResult
     func showOverlay(@ViewBuilder content: (_ panelId: UUID) -> some View, spacingX _: CGFloat = 0, spacingY _: CGFloat = 0, extraHeight: CGFloat = 0, panelType: PanelType? = nil) -> UUID {
-        let statusFrame = StatusPanelManager.shared.getPanelFrame()
+        let statusFrame = StatusPanelManager.shared.getPanel().frame
 
         let uuid = UUID()
         let (hosting, contentSize) = createHostingViewAndGetSize(content: { content(uuid) })
@@ -60,7 +60,7 @@ class OverlayController {
     func updateContent(uuid: UUID, @ViewBuilder content: () -> some View) {
         guard let panel = panels[uuid] else { return }
 
-        let statusFrame = StatusPanelManager.shared.getPanelFrame()
+        let statusFrame = StatusPanelManager.shared.getPanel().frame
         let (hosting, contentSize) = createHostingViewAndGetSize(content: content)
 
         let origin = calculateOverlayOrigin(

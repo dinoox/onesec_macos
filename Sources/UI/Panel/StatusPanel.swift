@@ -28,20 +28,20 @@ class StatusPanel: NSPanel {
         )
 
         // 设置窗口属性
-        self.isOpaque = false
-        self.backgroundColor = .clear
-        self.level = .floating
-        self.hasShadow = false
-        self.isMovableByWindowBackground = false
-        self.acceptsMouseMovedEvents = true
-        self.ignoresMouseEvents = true
+        isOpaque = false
+        backgroundColor = .clear
+        level = .floating
+        hasShadow = false
+        isMovableByWindowBackground = false
+        acceptsMouseMovedEvents = true
+        ignoresMouseEvents = true
 
         // 设置内容视图
         let hostingView = AutoResizingHostingView(rootView: StatusView())
         hostingView.onSizeChanged = { [weak self] in
             self?.resizeToFitContent()
         }
-        self.contentView = hostingView
+        contentView = hostingView
         becomeKey()
 
         // 订阅屏幕切换事件
@@ -87,7 +87,7 @@ class StatusPanel: NSPanel {
                     context.timingFunction = CAMediaTimingFunction(name: .easeOut)
                     self.animator().alphaValue = 1.0
                 }
-            },      
+            },
         )
     }
 
@@ -153,7 +153,7 @@ class StatusPanelManager {
     private let panel: StatusPanel
 
     private init() {
-        self.panel = StatusPanel()
+        panel = StatusPanel()
         panel.alphaValue = 0
     }
 
@@ -187,8 +187,8 @@ class StatusPanelManager {
         makeKeyPanel()
     }
 
-    func getPanelFrame() -> NSRect {
-        panel.frame
+    func getPanel() -> NSPanel {
+        panel
     }
 
     func makeKeyPanel(completion: (() -> Void)? = nil) {

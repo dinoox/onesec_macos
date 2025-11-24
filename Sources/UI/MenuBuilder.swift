@@ -38,8 +38,6 @@ final class MenuBuilder {
     }
 
     func showMenu(in view: NSView) {
-        guard let event = NSApp.currentEvent else { return }
-        
         let menu = NSMenu()
         
         let shortcutItem = NSMenuItem(title: "快捷键设置", action: #selector(handleShortcutSettings), keyEquivalent: "")
@@ -84,6 +82,7 @@ final class MenuBuilder {
         menu.addItem(translateItem)
         menu.addItem(NSMenuItem.separator())
         
-        NSMenu.popUpContextMenu(menu, with: event, for: view)
+        let location = NSPoint(x: view.bounds.midX, y: 40)
+        menu.popUp(positioning: nil, at: location, in: view)
     }
 }

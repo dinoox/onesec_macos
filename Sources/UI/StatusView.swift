@@ -16,7 +16,7 @@ struct StatusView: View {
             mode: recording.mode
         ).onTapGesture {
             overlay.hideAllOverlays()
-            MenuBuilder.shared.showMenu(in: NSApp.windows.first?.contentView ?? NSView())
+            MenuBuilder.shared.showMenu(in: StatusPanelManager.shared.getPanel().contentView!)
         }
         .padding(.bottom, 4)
         .frame(width: 200, height: 80, alignment: .bottom)
