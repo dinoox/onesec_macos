@@ -20,7 +20,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             AXSelectionObserver.shared.startObserving()
             AXTranslationAccessor.setupMouseUpListener()
         }
-        
+    
         SyncScheduler.shared.start()
     }
 }

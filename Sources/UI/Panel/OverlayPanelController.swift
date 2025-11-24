@@ -3,6 +3,7 @@ import ObjectiveC
 import SwiftUI
 
 enum PanelType {
+    case editable
     case translate
     case command
     case notification
@@ -48,11 +49,12 @@ class OverlayController {
             return existingUUID
         }
 
-        let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight)
+        let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight, panelType: panelType)
+        panel.panelType = panelType
+
         setupPanel(panel, hosting: hosting)
         animateFadeIn(panel)
 
-        panel.panelType = panelType
         panels[uuid] = panel
         return uuid
     }
@@ -118,6 +120,10 @@ class OverlayController {
         }
     }
 
+    func getPanel(uuid: UUID) -> NSPanel? {
+        panels[uuid]
+    }
+
     @discardableResult
     func showOverlayAboveSelection(@ViewBuilder content: (_ panelId: UUID) -> some View, spacingX: CGFloat = 14, spacingY: CGFloat = 14, extraHeight: CGFloat = 0, panelType: PanelType? = nil, expandDirection: ExpandDirection? = nil) -> UUID? {
         let (bounds, isExactBounds) = getValidSelectionBounds()
@@ -156,12 +162,12 @@ class OverlayController {
             self?.handlePanelSizeChange(uuid: uuid)
         }
 
-        let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight)
+        let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight, panelType: panelType)
+        panel.panelType = panelType
         setupPanel(panel, hosting: hosting)
 
         animateFadeIn(panel)
 
-        panel.panelType = panelType
         panel.expandDirection = expandDirection
         panel.isMovableByWindowBackground = true
         panel.initialOriginY = origin.y
@@ -193,14 +199,51 @@ class OverlayController {
             self?.handlePanelSizeChange(uuid: uuid)
         }
 
-        let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight)
+        let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight, panelType: panelType)
+        panel.panelType = panelType
+
         setupPanel(panel, hosting: hosting)
         animateFadeIn(panel)
 
-        panel.panelType = panelType
         panel.isMovableByWindowBackground = true
         panel.expandDirection = expandDirection
         panel.initialOriginY = origin.y
+        panels[uuid] = panel
+        return uuid
+    }
+
+    @discardableResult
+    func showOverlayOnCenter(@ViewBuilder content: (_ panelId: UUID) -> some View, extraHeight: CGFloat = 0, panelType: PanelType? = nil) -> UUID? {
+        guard let screen = NSScreen.main else {
+            return nil
+        }
+
+        let uuid = UUID()
+        let (hosting, contentSize) = createHostingViewAndGetSize(content: { content(uuid) })
+
+        let origin = calculateCenterOverlayOrigin(
+            contentSize: contentSize,
+            screenFrame: screen.frame
+        )
+
+        if let panelType = panelType, let existingUUID = findPanelByType(panelType) {
+            moveAndUpdateExistingPanel(
+                uuid: existingUUID,
+                content: content,
+                origin: origin,
+                contentSize: contentSize,
+                extraHeight: extraHeight
+            )
+            return existingUUID
+        }
+
+        let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight, panelType: panelType)
+        panel.panelType = panelType
+        panel.isMovableByWindowBackground = true
+
+        setupPanel(panel, hosting: hosting)
+        animateFadeIn(panel)
+
         panels[uuid] = panel
         return uuid
     }
@@ -209,13 +252,25 @@ class OverlayController {
 // MARK: - Private Helpers
 
 private extension OverlayController {
-    func createPanel(origin: NSPoint, size: NSSize, extraHeight: CGFloat = 0) -> NSPanel {
-        NSPanel(
-            contentRect: NSRect(origin: origin, size: NSSize(width: size.width, height: size.height + extraHeight)),
-            styleMask: [.borderless, .nonactivatingPanel],
-            backing: .buffered,
-            defer: false
-        )
+    func createPanel(origin: NSPoint, size: NSSize, extraHeight: CGFloat = 0, panelType: PanelType? = nil) -> NSPanel {
+        let rect = NSRect(origin: origin, size: NSSize(width: size.width, height: size.height + extraHeight))
+
+        if panelType == .editable {
+            log.info("create editable panel")
+            return EditablePanel(
+                contentRect: rect,
+                styleMask: [.borderless, .nonactivatingPanel],
+                backing: .buffered,
+                defer: false
+            )
+        } else {
+            return NSPanel(
+                contentRect: rect,
+                styleMask: [.borderless, .nonactivatingPanel],
+                backing: .buffered,
+                defer: false
+            )
+        }
     }
 
     func setupPanel(_ panel: NSPanel, hosting: NSHostingView<some View>) {
@@ -225,7 +280,12 @@ private extension OverlayController {
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hasShadow = false
         panel.contentView = hosting
-        panel.orderFront(nil)
+
+        if panel.panelType == .editable {
+            panel.makeKeyAndOrderFront(nil)
+        } else {
+            panel.orderFront(nil)
+        }
     }
 
     func animateFadeIn(_ panel: NSPanel) {
@@ -257,6 +317,12 @@ private extension OverlayController {
         let maxX = screenFrame.origin.x + screenFrame.width - contentSize.width
         x = max(minX, min(x, maxX))
 
+        return NSPoint(x: x, y: y)
+    }
+
+    func calculateCenterOverlayOrigin(contentSize: NSSize, screenFrame: NSRect) -> NSPoint {
+        let x = screenFrame.origin.x + (screenFrame.width - contentSize.width) / 2
+        let y = screenFrame.origin.y + (screenFrame.height - contentSize.height) / 2
         return NSPoint(x: x, y: y)
     }
 
@@ -392,5 +458,39 @@ extension NSPanel {
         set {
             objc_setAssociatedObject(self, &Self.initialOriginYKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
+    }
+}
+
+class EditablePanel: NSPanel {
+    override var canBecomeKey: Bool {
+        return true
+    }
+
+    override var canBecomeMain: Bool {
+        return true
+    }
+
+    override func performKeyEquivalent(with event: NSEvent) -> Bool {
+        if event.modifierFlags.contains(.command) {
+            switch event.charactersIgnoringModifiers {
+            case "a":
+                return NSApp.sendAction(#selector(NSText.selectAll(_:)), to: nil, from: self)
+            case "c":
+                return NSApp.sendAction(#selector(NSText.copy(_:)), to: nil, from: self)
+            case "v":
+                return NSApp.sendAction(#selector(NSText.paste(_:)), to: nil, from: self)
+            case "x":
+                return NSApp.sendAction(#selector(NSText.cut(_:)), to: nil, from: self)
+            case "z":
+                if event.modifierFlags.contains(.shift) {
+                    return NSApp.sendAction(Selector(("redo:")), to: nil, from: self)
+                } else {
+                    return NSApp.sendAction(Selector(("undo:")), to: nil, from: self)
+                }
+            default:
+                break
+            }
+        }
+        return super.performKeyEquivalent(with: event)
     }
 }

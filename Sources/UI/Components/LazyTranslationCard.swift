@@ -141,6 +141,10 @@ struct LazyTranslationCard: View {
                                 .font(.system(size: 13.5, weight: .regular))
                                 .foregroundColor(.overlaySecondaryText)
                         }
+                        .transition(.asymmetric(
+                            insertion: .opacity,
+                            removal: .identity
+                        ))
                     } else if let error = errorMessage {
                         Text(error)
                             .font(.system(size: 13.5, weight: .regular))

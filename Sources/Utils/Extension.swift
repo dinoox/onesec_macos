@@ -19,6 +19,10 @@ extension String {
             .map { $0.trimmingCharacters(in: .whitespaces) }
             .joined(separator: " && \\\n")
     }
+
+    var newlineCount: Int {
+        components(separatedBy: "\n").count - 1
+    }
 }
 
 extension Text {

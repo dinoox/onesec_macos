@@ -99,6 +99,9 @@ extension StatusView {
 
             Task {
                 var canPaste = false
+                defer {
+                    handleAlert(canPaste: canPaste, processMode: processMode, summary: summary, polishedText: polishedText, textWidth: textWidth)
+                }
 
                 // 1.
                 // 首先根据白名单使用零宽字符复制测试方法
@@ -109,7 +112,6 @@ extension StatusView {
                         await AXPasteboardController.pasteTextToActiveApp(summary)
                     }
 
-                    handleAlert(canPaste: canPaste, processMode: processMode, summary: summary, polishedText: polishedText, textWidth: textWidth)
                     return
                 }
 
@@ -126,7 +128,6 @@ extension StatusView {
                         await AXPasteboardController.pasteTextToActiveApp(summary)
                     }
 
-                    handleAlert(canPaste: canPaste, processMode: processMode, summary: summary, polishedText: polishedText, textWidth: textWidth)
                     return
                 }
 
@@ -135,12 +136,11 @@ extension StatusView {
                 // 使用粘贴探针检测是否可以粘贴
                 log.info("Fallback to paste probe")
                 canPaste = await AXPasteProbe.runPasteProbe(summary)
-                handleAlert(canPaste: canPaste, processMode: processMode, summary: summary, polishedText: polishedText, textWidth: textWidth)
             }
-        case let .terminalLinuxChoice(bundleID, appName, endpointIdentifier, commands):
+        case let .terminalLinuxChoice(_, _, _, commands):
             recording.state = .idle
             log.info("Receive terminalLinuxChoice: \(commands)")
-            LinuxCommandChoiceCard.show(commands: commands, bundleID: bundleID, appName: appName, endpointIdentifier: endpointIdentifier)
+            LinuxCommandCard.show(commands: commands)
         default:
             break
         }
@@ -152,6 +152,11 @@ extension StatusView {
         if canPaste {
             if processMode == .translate {
                 ContentCard<EmptyView>.showAboveSelection(title: "输入原文", content: polishedText, onTap: nil, actionButtons: nil, cardWidth: cardWidth, spacingX: 8, spacingY: 14, panelType: .translate)
+            } else if processMode == .terminal {
+                let commands = [
+                    LinuxCommand(distro: "", command: summary, displayName: ""),
+                ]
+                LinuxCommandCard.show(commands: commands)
             }
         } else {
             if processMode == .translate {
