@@ -178,7 +178,7 @@ class AXPasteboardController {
 
     static func restorePasteboard(_ oldContents: String?) {
         let pasteboard = NSPasteboard.general
-        if let oldContents {
+        if let oldContents, pasteboard.string(forType: .string) == oldContents {
             pasteboard.clearContents()
             pasteboard.setString(oldContents, forType: .string)
         }
