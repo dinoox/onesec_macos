@@ -31,11 +31,12 @@ class OverlayController {
         let uuid = UUID()
         let (hosting, contentSize) = createHostingViewAndGetSize(content: { content(uuid) })
 
-        let origin: NSPoint
+        var origin: NSPoint
         if canMove,
            panelType == .translate,
            let savedPosition = lastDraggedPosition
         {
+            log.info("use saved position: \(savedPosition)")
             origin = savedPosition
         } else {
             origin = calculateOverlayOrigin(
@@ -47,6 +48,10 @@ class OverlayController {
 
         // 如果指定了 panelType，尝试找到现有的同类型 panel
         if let panelType = panelType, let existingUUID = findPanelByType(panelType) {
+            if panels[existingUUID]!.panelType == .translate {
+                origin = panels[existingUUID]!.frame.origin
+            }
+
             moveAndUpdateExistingPanel(
                 uuid: existingUUID,
                 content: content,
@@ -349,7 +354,6 @@ private extension OverlayController {
         guard let panel = panels[uuid] else { return }
 
         let (hosting, actualSize) = createHostingViewAndGetSize(content: { content(uuid) })
-
         panel.contentView = hosting
 
         let newFrame = NSRect(
@@ -357,6 +361,10 @@ private extension OverlayController {
             size: NSSize(width: actualSize.width, height: actualSize.height + extraHeight)
         )
 
+        if NSEqualPoints(panel.frame.origin, origin) {
+            panel.setFrame(newFrame, display: true)
+            return
+        }
         panel.animations = ["frame": CASpringAnimation.createSpringFrameMoveAnimation(keyPath: "frame", fromValue: panel.frame, toValue: newFrame)]
         panel.animator().setFrame(newFrame, display: true)
     }
