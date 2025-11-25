@@ -27,6 +27,10 @@ class AXPasteProbe {
             }
         }
     }
+
+    static func isPasteAllowed() async -> Bool {
+        return await runPasteProbe("")
+    }
 }
 
 extension AXPasteProbe {

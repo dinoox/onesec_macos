@@ -51,6 +51,26 @@ struct CommandItem: View {
         command.command.newlineCount >= 1
     }
 
+    @State private var text: String =
+        """
+        struct Member {
+            let id = UUID().uuidString
+            var name: String
+            var team: Team
+        }
+
+        enum Team {
+            case home, away
+
+            var color: Color {
+                switch self {
+                case .home: return .red
+                case .away: return .blue
+                }
+            }
+        }
+        """
+
     var body: some View {
         VStack(alignment: .leading, spacing: 9) {
             if isChoiceMode {
@@ -64,14 +84,17 @@ struct CommandItem: View {
 
             VStack(alignment: .trailing, spacing: 10) {
                 if shouldShowEditor {
-                    SyntaxTextEditor(
-                        text: $editableCommand,
-                        language: "bash",
-                        lightTheme: "github",
-                        darkTheme: "github-dark",
-                        fontSize: 14
-                    )
-                    .frame(maxWidth: .infinity)
+                    CodeEditor(text: $text, theme: .default)
+                        .frame(minHeight: 100)
+                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                    // CodeEditor(
+                    //     text: $editableCommand,
+                    //     backgroundColor: NSColor(Color.overlayCodeBackground),
+                    //     textColor: NSColor(Color.overlayText),
+                    //     fontSize: 14
+                    // )
+                    // .frame(minHeight: 110)
+                    // .clipShape(RoundedRectangle(cornerRadius: 6))
                 } else {
                     Text(command.command)
                         .font(.system(size: 14, weight: .regular))
@@ -86,7 +109,7 @@ struct CommandItem: View {
                 }
 
                 Button(action: handleSelect) {
-                    Text(isCopied ? "已复制" : "复制")
+                    Text(isCopied ? "已插入" : "插入")
                         .font(.system(size: 12, weight: .semibold))
                         .padding(.horizontal, 8)
                         .padding(.vertical, 6)
@@ -129,8 +152,7 @@ struct CommandItem: View {
                     }
                 }
 
-                await AXPasteboardController.pasteTextToActiveApp(editableCommand
-                    .formattedCommand)
+                await AXPasteboardController.pasteTextToActiveApp(editableCommand)
 
             } catch {
                 Tooltip.show(content: response.message, type: .error)

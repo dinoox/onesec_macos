@@ -91,54 +91,27 @@ extension StatusView {
             ])
         case let .serverResultReceived(summary, _, processMode, polishedText):
             recording.state = .idle
-            let textWidth = getTextWidth(text: summary)
+
+            // LinuxCommandCard.show(commands: [LinuxCommand(distro: "", command: summary, displayName: "")])
+            // return;
 
             if summary.isEmpty {
                 return
             }
 
             Task {
-                var canPaste = false
+                let canPaste = await canPasteNow()
                 defer {
-                    handleAlert(canPaste: canPaste, processMode: processMode, summary: summary, polishedText: polishedText, textWidth: textWidth)
+                    handleAlert(canPaste: canPaste, processMode: processMode, summary: summary, polishedText: polishedText)
                 }
 
-                // 1.
-                // 首先根据白名单使用零宽字符复制测试方法
-                if isAppShouldTestWithZeroWidthChar() {
-                    log.info("Use zero width char paste test")
-                    if await AXPasteboardController.whasTextInputFocus() {
-                        canPaste = true
-                        if processMode == .terminal && summary.newlineCount >= 1 { return }
-                        await AXPasteboardController.pasteTextToActiveApp(summary)
-                    }
-
+                if processMode == .terminal && summary.newlineCount >= 1 {
                     return
                 }
-
-                // 2.
-                // 当前应用有焦点元素, 说明支持 AX
-                // 如果是可编辑的元素则直接粘贴, 否则弹窗
-                let element = AXElementAccessor.getFocusedElement()
-                let isEditable = element.map { AXElementAccessor.isEditableElement($0) } ?? false
-
-                if element != nil, !isAppWithoutAXSupport() {
-                    log.info("Use AX paste test")
-                    if isEditable {
-                        canPaste = true
-                        if processMode == .terminal && summary.newlineCount >= 1 { return }
-                        await AXPasteboardController.pasteTextToActiveApp(summary)
-                    }
-
+                if canPaste {
+                    await AXPasteboardController.pasteTextToActiveApp(summary)
                     return
                 }
-
-                // 3.
-                // 对于 AX 黑名单应用
-                // 使用粘贴探针检测是否可以粘贴
-                log.info("Fallback to paste probe")
-                if processMode == .terminal && summary.newlineCount >= 1 { return }
-                canPaste = await AXPasteProbe.runPasteProbe(summary)
             }
         case let .terminalLinuxChoice(_, _, _, commands):
             recording.state = .idle
@@ -149,7 +122,32 @@ extension StatusView {
         }
     }
 
-    private func handleAlert(canPaste: Bool, processMode: TextProcessMode, summary: String, polishedText: String, textWidth _: CGFloat) {
+    private func canPasteNow() async -> Bool {
+        // 首先根据白名单使用零宽字符复制测试方法
+        if isAppShouldTestWithZeroWidthChar() {
+            log.info("Use zero width char paste test")
+            return await AXPasteboardController.whasTextInputFocus()
+        }
+
+        // 2.
+        // 当前应用有焦点元素, 说明支持 AX
+        // 如果是可编辑的元素则直接粘贴, 否则弹窗
+        let element = AXElementAccessor.getFocusedElement()
+        let isEditable = element.map { AXElementAccessor.isEditableElement($0) } ?? false
+
+        if element != nil, !isAppWithoutAXSupport() {
+            log.info("Use AX paste test")
+            return isEditable
+        }
+
+        // 3.
+        // 对于 AX 黑名单应用
+        // 使用粘贴探针检测是否可以粘贴
+        log.info("Fallback to paste probe")
+        return await AXPasteProbe.isPasteAllowed()
+    }
+
+    private func handleAlert(canPaste: Bool, processMode: TextProcessMode, summary: String, polishedText: String) {
         let cardWidth: CGFloat = getTextCardWidth(text: summary)
 
         if canPaste {
