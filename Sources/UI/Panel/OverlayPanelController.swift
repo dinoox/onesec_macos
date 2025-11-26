@@ -162,7 +162,8 @@ class OverlayController {
             screenFrame: screen.frame,
             screenHeight: screen.frame.height,
             spacingX: isExactBounds ? 0 : spacingX,
-            spacingY: isExactBounds ? 0 : spacingY
+            spacingY: isExactBounds ? 0 : spacingY,
+            contentSize: contentSize
         )
 
         if let panelType = panelType, let existingUUID = findPanelByType(panelType) {
@@ -312,30 +313,57 @@ private extension OverlayController {
         panel.animator().alphaValue = 1.0
     }
 
-    func calculateOverlayOrigin(statusFrame: NSRect, contentSize: NSSize, spacing: CGFloat) -> NSPoint {
-        NSPoint(
+    func clampToScreen(origin: NSPoint, contentSize: NSSize, screenFrame: NSRect) -> NSPoint {
+        let actualWidth = contentSize.width - shadowPadding * 2
+        let actualHeight = contentSize.height - shadowPadding * 2
+        
+        var x = origin.x
+        var y = origin.y
+        
+        // 检查右边界
+        if x + shadowPadding + actualWidth > screenFrame.maxX {
+            x = screenFrame.maxX - actualWidth - shadowPadding
+        }
+        // 检查左边界
+        if x + shadowPadding < screenFrame.minX {
+            x = screenFrame.minX - shadowPadding
+        }
+        // 检查上边界
+        if y + shadowPadding + actualHeight > screenFrame.maxY {
+            y = screenFrame.maxY - actualHeight - shadowPadding
+        }
+        // 检查下边界
+        if y + shadowPadding < screenFrame.minY {
+            y = screenFrame.minY - shadowPadding
+        }
+        
+        return NSPoint(x: x, y: y)
+    }
+
+    func calculateOverlayOrigin(statusFrame: NSRect, contentSize: NSSize, spacing: CGFloat, screenFrame: NSRect? = nil) -> NSPoint {
+        let origin = NSPoint(
             x: statusFrame.origin.x + (statusFrame.width - contentSize.width) / 2,
             y: statusFrame.origin.y + statusBarHeight + spacing - shadowPadding
         )
+        guard let screenFrame = screenFrame ?? NSScreen.main?.frame else { return origin }
+        return clampToScreen(origin: origin, contentSize: contentSize, screenFrame: screenFrame)
     }
 
-    func calculateSelectionOverlayOrigin(bounds: NSRect, screenFrame: NSRect, screenHeight: CGFloat, spacingX: CGFloat, spacingY: CGFloat) -> NSPoint {
+    func calculateSelectionOverlayOrigin(bounds: NSRect, screenFrame: NSRect, screenHeight: CGFloat, spacingX: CGFloat, spacingY: CGFloat, contentSize: NSSize) -> NSPoint {
         let cocoaPoint = AXAtomic.convertAXPointToCocoa(axPoint: bounds.origin, screenHeight: screenHeight)
-        return NSPoint(
+        let origin = NSPoint(
             x: bounds.origin.x + screenFrame.origin.x - shadowPadding + spacingX,
             y: cocoaPoint.y + screenFrame.origin.y - shadowPadding + spacingY
         )
+        return clampToScreen(origin: origin, contentSize: contentSize, screenFrame: screenFrame)
     }
 
     func calculatePointOverlayOrigin(point: NSPoint, contentSize: NSSize, screenFrame: NSRect, spacing: CGFloat) -> NSPoint {
-        var x = point.x - shadowPadding
-        let y = point.y + spacing - shadowPadding
-
-        let minX = screenFrame.origin.x
-        let maxX = screenFrame.origin.x + screenFrame.width - contentSize.width
-        x = max(minX, min(x, maxX))
-
-        return NSPoint(x: x, y: y)
+        let origin = NSPoint(
+            x: point.x - shadowPadding,
+            y: point.y + spacing - shadowPadding
+        )
+        return clampToScreen(origin: origin, contentSize: contentSize, screenFrame: screenFrame)
     }
 
     func calculateCenterOverlayOrigin(contentSize: NSSize, screenFrame: NSRect) -> NSPoint {
