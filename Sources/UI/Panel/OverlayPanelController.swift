@@ -331,7 +331,7 @@ private extension OverlayController {
             x: statusFrame.origin.x + (statusFrame.width - contentSize.width) / 2,
             y: statusFrame.origin.y + statusBarHeight + spacing - shadowPadding
         )
-        guard let screenFrame = screenFrame ?? NSScreen.main?.frame else { return origin }
+        guard let screenFrame = screenFrame ?? ConnectionCenter.shared.currentMouseScreen?.frame ?? NSScreen.main?.frame else { return origin }
         return clampToScreen(origin: origin, contentSize: contentSize, screenFrame: screenFrame)
     }
 
