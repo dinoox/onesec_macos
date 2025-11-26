@@ -44,4 +44,15 @@ extension View {
             self
         }
     }
+
+    @ViewBuilder
+    func onValueChange<V: Equatable>(of value: V, perform action: @escaping (_ oldValue: V, _ newValue: V) -> Void) -> some View {
+        if #available(macOS 11.0, *) {
+            self.onChange(of: value) { [value] newValue in
+                action(value, newValue)
+            }
+        } else {
+            self
+        }
+    }
 }

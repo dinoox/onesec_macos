@@ -108,7 +108,7 @@ class OverlayController {
 
         panel.expandDirection = expandDirection
         panel.isMovableByWindowBackground = true
-        panel.initialOriginY = origin.y
+        panel.initialOrigin = origin
         panels[uuid] = panel
         return uuid
     }
@@ -145,7 +145,7 @@ class OverlayController {
 
         panel.isMovableByWindowBackground = true
         panel.expandDirection = expandDirection
-        panel.initialOriginY = origin.y
+        panel.initialOrigin = origin
         panels[uuid] = panel
         return uuid
     }
@@ -451,13 +451,18 @@ private extension OverlayController {
     func handlePanelSizeChange(uuid: UUID) {
         guard let panel = panels[uuid],
               let contentView = panel.contentView,
-              panel.expandDirection == .up else { return }
+              panel.expandDirection == .up
+        else { return }
 
         let oldFrame = panel.frame
         var newOrigin = oldFrame.origin
 
-        newOrigin.y = panel.initialOriginY ?? newOrigin.y
+        // 面板拖动也会引起的 sizechange 事件
+        guard abs((panel.initialOrigin?.x ?? 0) - newOrigin.x) < 1 else {
+            return
+        }
 
+        newOrigin.y = panel.initialOrigin?.y ?? newOrigin.y
         let newFrame = NSRect(origin: newOrigin, size: contentView.fittingSize)
         panel.setFrame(newFrame, display: true, animate: false)
     }

@@ -17,7 +17,8 @@ enum ExpandDirection {
 extension NSPanel {
     private static var panelTypeKey: UInt8 = 0
     private static var expandDirectionKey: UInt8 = 1
-    private static var initialOriginYKey: UInt8 = 2
+    private static var initialOriginKey: UInt8 = 2
+    private static var initializedKey: UInt8 = 3
 
     var panelType: PanelType? {
         get {
@@ -37,12 +38,21 @@ extension NSPanel {
         }
     }
 
-    var initialOriginY: CGFloat? {
+    var initialOrigin: NSPoint? {
         get {
-            return objc_getAssociatedObject(self, &Self.initialOriginYKey) as? CGFloat
+            return objc_getAssociatedObject(self, &Self.initialOriginKey) as? NSPoint
         }
         set {
-            objc_setAssociatedObject(self, &Self.initialOriginYKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+            objc_setAssociatedObject(self, &Self.initialOriginKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
+        }
+    }
+
+    var initialized: Bool {
+        get {
+            return objc_getAssociatedObject(self, &Self.initializedKey) as? Bool ?? false
+        }
+        set {
+            objc_setAssociatedObject(self, &Self.initializedKey, newValue, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
         }
     }
 }

@@ -35,7 +35,7 @@ struct LazyTranslationCard: View {
     @State private var isHovering = false
     @State private var hasBeenHovered = false
     @State private var isExpanded = false
-    @State private var isLoading = false
+    @State private var isLoading = true
     @State private var translationResult: TranslationResult? = nil
     @State private var errorMessage: String? = nil
     @State private var contentHeight: CGFloat = 0
@@ -243,10 +243,10 @@ struct LazyTranslationCard: View {
                 stopAutoCloseTimer()
             }
         }
-        .onAppear {
-            fetchTranslation()
-        }
         .onDisappear { stopAutoCloseTimer() }
+        .onValueChange(of: isLoading) { _, newValue in
+            OverlayController.shared.getPanel(uuid: panelID)?.initialized = !newValue
+        }
     }
 
     private func closeCard() {
@@ -298,7 +298,7 @@ struct LazyTranslationCard: View {
     }
 
     private func fetchTranslation() {
-        guard !isLoading, translationResult == nil else { return }
+        guard translationResult == nil else { return }
 
         guard !content.isEmpty else { return }
 
