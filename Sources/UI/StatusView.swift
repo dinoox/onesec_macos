@@ -54,7 +54,7 @@ extension StatusView {
             if to == .command {
                 recording.mode = to
             }
-        case .userConfigUpdated:
+        case .userDataUpdated:
             if ConnectionCenter.shared.isAuthed,
                notificationPanelId != nil,
                ConnectionCenter.shared.hasPermissions()

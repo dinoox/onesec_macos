@@ -19,8 +19,7 @@ enum AppEvent {
     case modeUpgraded(from: RecordMode, to: RecordMode)
     case notificationReceived(NotificationMessageType)
     //
-    case userConfigUpdated
-    case userAuthUpdated
+    case userDataUpdated(UserDataUpdateType)
     //
     case hotkeySettingStarted(mode: RecordMode)
     case hotkeySettingEnded(mode: RecordMode, hotkeyCombination: [String])
@@ -58,7 +57,6 @@ class EventBus: @unchecked Sendable {
 }
 
 extension EventBus {
-    
     var recordingSessionEnded: AnyPublisher<Void, Never> {
         eventSubject.share()
             .compactMap { event in

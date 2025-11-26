@@ -45,7 +45,7 @@ class KeyStateTracker {
             .filter {
                 if case .hotkeySettingResulted = $0 { return true }
                 if case .hotkeySettingEnded = $0 { return true }
-                if case .userConfigUpdated = $0 { return true }
+                if case .userDataUpdated(.config) = $0 { return true }
                 return false
             }
             .sink { [weak self] _ in

@@ -194,11 +194,11 @@ extension UDSClient {
         if token != Config.shared.USER_CONFIG.authToken {
             ConnectionCenter.shared.isAuthed = JWTValidator.isValid(Config.shared.USER_CONFIG.authToken)
             log.info("ConnectionCenter.shared.isAuthed \(ConnectionCenter.shared.isAuthed)")
-            EventBus.shared.publish(.userAuthUpdated)
+            EventBus.shared.publish(.userDataUpdated(.auth))
             return
         }
 
-        EventBus.shared.publish(.userConfigUpdated)
+        EventBus.shared.publish(.userDataUpdated(.config))
     }
 
     func handleAuthTokenFailed() {

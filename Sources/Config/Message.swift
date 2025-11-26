@@ -107,6 +107,11 @@ enum NotificationMessageType: Equatable {
     }
 }
 
+enum UserDataUpdateType {
+    case auth
+    case config
+}
+
 // MARK: - 记录当前激活应用的基本信息
 
 struct AppInfo {
@@ -147,7 +152,6 @@ struct HostInfo {
         ]
     }
 }
-
 
 // MARK: - 记录当前输入框的上下文信息
 
@@ -199,7 +203,6 @@ struct FocusElementInfo {
     }
 }
 
-
 // MARK: - 记录当前录音的应用上下文
 
 struct AppContext {
@@ -208,13 +211,13 @@ struct AppContext {
     let focusContext: FocusContext
     let focusElementInfo: FocusElementInfo
 
-     static let empty = AppContext(
+    static let empty = AppContext(
         appInfo: AppInfo.empty,
         hostInfo: HostInfo.empty,
         focusContext: FocusContext.empty,
         focusElementInfo: FocusElementInfo.empty
-     )
-    
+    )
+
     func toJSON() -> [String: Any] {
         [
             "app_info": appInfo.toJSON(),
