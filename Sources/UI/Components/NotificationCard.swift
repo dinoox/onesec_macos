@@ -4,47 +4,83 @@ struct NotificationCard: View {
     let title: String
     let content: String
     let panelId: UUID
-    let modeColor: Color
     let autoHide: Bool
+    let showTimerTip: Bool
+    let autoCloseDuration: Int
     let onTap: (() -> Void)?
     let onClose: (() -> Void)?
 
+    private let cardWidth: CGFloat = 240
+
     @State private var isCloseHovered = false
     @State private var isCardHovered = false
+    @State private var progress: CGFloat = 1.0
+    @State private var timerTask: Task<Void, Never>?
+
+    init(
+        title: String,
+        content: String,
+        panelId: UUID,
+        autoHide: Bool = true,
+        showTimerTip: Bool = false,
+        autoCloseDuration: Int = 3,
+        onTap: (() -> Void)? = nil,
+        onClose: (() -> Void)? = nil
+    ) {
+        self.title = title
+        self.content = content
+        self.panelId = panelId
+        self.autoHide = autoHide
+        self.showTimerTip = showTimerTip
+        self.autoCloseDuration = autoCloseDuration
+        self.onTap = onTap
+        self.onClose = onClose
+    }
 
     var body: some View {
         ZStack(alignment: .topTrailing) {
-            HStack(alignment: .center, spacing: 12) {
-                ZStack {
-                    Image.systemSymbol("bell.fill")
-                        .font(.system(size: 18))
-                        .foregroundColor(modeColor)
+            VStack(spacing: 0) {
+                HStack(alignment: .center, spacing: 12) {
+                    ZStack {
+                        Image.systemSymbol("bell.fill")
+                            .font(.system(size: 18))
+                            .foregroundColor(.overlayPrimary)
+                    }
+
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text(title)
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundColor(.overlayText)
+                            .lineLimit(1)
+
+                        Text(content)
+                            .font(.system(size: 12))
+                            .foregroundColor(.overlaySecondaryText)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
+
+                    Spacer()
                 }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 10)
 
-                VStack(alignment: .leading, spacing: 4) {
-                    // 标题
-                    Text(title)
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundColor(.overlayText)
-                        .lineLimit(1)
+                if showTimerTip {
+                    ZStack(alignment: .leading) {
+                        Rectangle()
+                            .fill(Color.overlayPrimary.opacity(0.3))
+                            .frame(height: 3)
 
-                    // 内容
-                    Text(content)
-                        .font(.system(size: 12))
-                        .foregroundColor(.overlaySecondaryText)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
+                        Rectangle()
+                            .fill(Color.overlayPrimary)
+                            .frame(width: cardWidth * progress, height: 3)
+                            .animation(.linear(duration: Double(autoCloseDuration)), value: progress)
+                    }
+                    .frame(height: 3)
                 }
-
-                Spacer()
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .frame(width: 240)
-            .background(
-                RoundedRectangle(cornerRadius: 18)
-                    .fill(Color.overlayBackground),
-            )
+            .frame(width: cardWidth)
+            .background(Color.overlayBackground)
             .clipShape(RoundedRectangle(cornerRadius: 18))
             .overlay(
                 RoundedRectangle(cornerRadius: 18)
@@ -64,6 +100,7 @@ struct NotificationCard: View {
             }
 
             Button(action: {
+                stopAutoCloseTimer()
                 OverlayController.shared.hideOverlay(uuid: panelId)
                 onClose?()
             }) {
@@ -88,12 +125,33 @@ struct NotificationCard: View {
         .animation(.easeInOut(duration: 0.15), value: isCardHovered)
         .onAppear {
             if autoHide {
-                Task { @MainActor in
-                    try? await sleep(3000)
-                    guard !Task.isCancelled else { return }
-                    OverlayController.shared.hideOverlay(uuid: panelId)
+                if showTimerTip {
+                    startAutoCloseTimer()
+                } else {
+                    Task { @MainActor in
+                        try? await sleep(UInt64(autoCloseDuration) * 1000)
+                        guard !Task.isCancelled else { return }
+                        OverlayController.shared.hideOverlay(uuid: panelId)
+                    }
                 }
             }
         }
+        .onDisappear {
+            stopAutoCloseTimer()
+        }
+    }
+
+    private func startAutoCloseTimer() {
+        timerTask = Task { @MainActor in
+            progress = 0
+            try? await sleep(UInt64(autoCloseDuration) * 1000)
+            guard !Task.isCancelled else { return }
+            OverlayController.shared.hideOverlay(uuid: panelId)
+        }
+    }
+
+    private func stopAutoCloseTimer() {
+        timerTask?.cancel()
+        timerTask = nil
     }
 }

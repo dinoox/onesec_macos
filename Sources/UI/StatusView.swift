@@ -65,11 +65,16 @@ extension StatusView {
         case let .notificationReceived(notificationType):
             log.info("Receive notification: \(notificationType)")
 
+            var autoHide = true
+            var showTimerTip = false
+            var autoCloseDuration = 3
             if notificationType != .recordingTimeoutWarning {
                 recording.state = .idle
+            } else {
+                showTimerTip = true
+                autoCloseDuration = 15
             }
 
-            var autoHide = true
             if notificationType == .authTokenFailed {
                 autoHide = false
             }
@@ -77,6 +82,8 @@ extension StatusView {
             showNotificationMessage(
                 title: notificationType.title, content: notificationType.content,
                 autoHide: autoHide,
+                showTimerTip: showTimerTip,
+                autoCloseDuration: autoCloseDuration,
             )
         case let .hotWordAddRequested(word):
             ContentCard<EmptyView>.show(title: "热词添加", content: "检测到热词 \"\(word)\", 是否添加到词库？", actionButtons: [
@@ -178,7 +185,9 @@ extension StatusView {
     }
 
     private func showNotificationMessage(
-        title: String, content: String, autoHide: Bool = true, onTap: (() -> Void)? = nil,
+        title: String, content: String,
+        autoHide: Bool = true, onTap: (() -> Void)? = nil,
+        showTimerTip: Bool = false, autoCloseDuration: Int = 3,
     ) {
         notificationPanelId = overlay.showOverlay(
             content: { panelId in
@@ -186,8 +195,9 @@ extension StatusView {
                     title: title,
                     content: content,
                     panelId: panelId,
-                    modeColor: recording.modeColor,
                     autoHide: autoHide,
+                    showTimerTip: showTimerTip,
+                    autoCloseDuration: autoCloseDuration,
                     onTap: onTap,
                     onClose: {
                         notificationPanelId = nil
