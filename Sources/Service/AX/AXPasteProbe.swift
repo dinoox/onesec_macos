@@ -1,64 +1,41 @@
 import AppKit
 
 class AXPasteProbe {
-    private static var lazyPasteProbeHit = false
-    private static var readCount = 0
-    private static var timeMarker: Date?
-    private static var pasteContent: String = ""
-
     static func runPasteProbe(_ content: String) async -> Bool {
-        readCount = 0
-        timeMarker = nil
-        lazyPasteProbeHit = false
-        pasteContent = content
+        let pasteboard = NSPasteboard.general
+        let provider = PasteboardDataProvider(text: content)
+        let item = NSPasteboardItem()
+        item.setDataProvider(provider, forTypes: [.string])
+        pasteboard.clearContents()
+        pasteboard.writeObjects([item])
 
-        NSPasteboard.general.declareTypes([.string], owner: self)
-        timeMarker = Date()
+        let startTime = CFAbsoluteTimeGetCurrent()
         AXPasteboardController.simulatePaste()
 
-        return await withCheckedContinuation { continuation in
-            DispatchQueue.global(qos: .userInitiated).async {
-                let deadline = Date().addingTimeInterval(1)
-                while !lazyPasteProbeHit, Date() < deadline {
-                    Thread.sleep(forTimeInterval: 0.01)
-                }
-                log.debug("🧪  \(lazyPasteProbeHit ? "可输入" : "不可输入")")
-                continuation.resume(returning: lazyPasteProbeHit)
+        for _ in 0 ..< 100 {
+            if provider.wasRequested {
+                let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
+                log.debug("🧪 可输入 (\(String(format: "%.1f", elapsed))ms)")
+                return true
             }
+            try? await sleep(10)
         }
+        log.debug("🧪 不可输入")
+        return false
     }
 
     static func isPasteAllowed() async -> Bool {
-        let oldContent = NSPasteboard.general.string(forType: .string)
+        let pasteboard = NSPasteboard.general
+        let oldContent = pasteboard.string(forType: .string)
         let canPaste = await runPasteProbe("")
 
         if let oldContent,
-           let currentContent = NSPasteboard.general.string(forType: .string),
+           let currentContent = pasteboard.string(forType: .string),
            currentContent.isEmpty
         {
-            NSPasteboard.general.clearContents()
-            NSPasteboard.general.setString(oldContent, forType: .string)
+            pasteboard.clearContents()
+            pasteboard.setString(oldContent, forType: .string)
         }
         return canPaste
-    }
-}
-
-extension AXPasteProbe {
-    @objc static func pasteboard(_ pasteboard: NSPasteboard, provideDataForType _: NSPasteboard.PasteboardType) {
-        readCount += 1
-
-        if let startTime = timeMarker {
-            let elapsed = Date().timeIntervalSince(startTime) * 1000
-            if readCount == 1 {
-                NSPasteboard.general.declareTypes([.string], owner: self)
-                log.info("粘贴被读取时间: \(String(format: "%.2f", elapsed))ms")
-            } else if readCount == 2 {
-                lazyPasteProbeHit = true
-                // pasteboard.setString(pasteContent, forType: .string)
-                log.info("粘贴后 declareTypes 被读取的时间: \(String(format: "%.2f", elapsed))ms")
-            }
-        }
-
-        timeMarker = Date()
     }
 }
