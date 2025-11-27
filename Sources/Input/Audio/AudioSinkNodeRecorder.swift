@@ -246,11 +246,10 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         }
 
         recordState = .stopping
+        audioEngine.stop()
 
         lock.lock()
         defer { lock.unlock() }
-
-        audioEngine.stop()
 
         // 刷新 Opus 编码器缓冲区, 发送所有剩余数据
         if let encoder = opusEncoder, let finalData = encoder.flush() {
@@ -283,6 +282,10 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         // 重置状态
         recordState = .idle
         audioEngine.stop()
+
+        lock.lock()
+        defer { lock.unlock() }
+
         audioQueue.removeAll()
 
         // 重置统计数据
@@ -353,16 +356,22 @@ extension AudioSinkNodeRecorder {
                 switch event {
                 case .serverResultReceived,
                      .terminalLinuxChoice:
-                    if self?.recordState == .processing {
-                        self?.resetState()
+                    Task { @MainActor in
+                        if self?.recordState == .processing {
+                            self?.resetState()
+                        }
                     }
                 case .notificationReceived(.serverTimeout),
                      .notificationReceived(.recordingTimeout),
                      .notificationReceived(.error):
-                    self?.resetState()
+                    Task { @MainActor in
+                        self?.resetState()
+                    }
                 case .notificationReceived(.serverUnavailable):
                     log.error("Server unavailable, stop recording")
-                    self?.stopRecording()
+                    Task { @MainActor in
+                        self?.stopRecording()
+                    }
                 default:
                     break
                 }
