@@ -40,6 +40,9 @@ class WebSocketAudioStreamer: @unchecked Sendable {
     // 确保 StopRecording 时, 上下文已经发送完毕
     private var contextTask: Task<Void, Never>?
 
+    // 当前录音会话 ID
+    private var recordingID: String = ""
+
     init() {
         initializeMessageListener()
     }
@@ -162,6 +165,8 @@ extension WebSocketAudioStreamer {
     func sendStartRecording(
         mode: RecordMode = .normal,
     ) {
+        recordingID = UUID().uuidString
+
         let data: [String: Any] = [
             "recognition_mode": mode.rawValue,
             "mode": Config.shared.TEXT_PROCESS_MODE.rawValue,
@@ -242,7 +247,7 @@ extension WebSocketAudioStreamer {
     }
 
     private func sendWebSocketMessage(type: MessageType, data: [String: Any]? = nil) {
-        guard let jsonStr = WebSocketMessage.create(type: type, data: data).toJSONString() else {
+        guard let jsonStr = WebSocketMessage.create(id: recordingID, type: type, data: data).toJSONString() else {
             log.error("Failed to create \(type) message")
             return
         }

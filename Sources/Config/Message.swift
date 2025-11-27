@@ -23,12 +23,14 @@ enum MessageType: String, CaseIterable {
 }
 
 struct WebSocketMessage {
+    let id: String
     let type: MessageType
     let timestamp: Int64
     let data: [String: Any]?
 
-    static func create(type: MessageType, data: [String: Any]? = nil) -> WebSocketMessage {
+    static func create(id: String = UUID().uuidString, type: MessageType, data: [String: Any]? = nil) -> WebSocketMessage {
         WebSocketMessage(
+            id: id,
             type: type,
             timestamp: Int64(Date().timeIntervalSince1970 * 1000),
             data: data
@@ -39,6 +41,7 @@ struct WebSocketMessage {
 extension WebSocketMessage {
     func toJSON() -> [String: Any] {
         var json: [String: Any] = [
+            "id": id,
             "type": type.rawValue,
             "timestamp": timestamp,
         ]

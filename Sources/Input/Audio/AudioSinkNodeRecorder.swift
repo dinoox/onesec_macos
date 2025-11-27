@@ -240,15 +240,16 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     }
 
     func stopRecording(stopState: RecordState = .processing) {
-        lock.lock()
-        defer { lock.unlock() }
-
         log.info("✅ Stop recording with state \(stopState), current state \(recordState)")
         guard recordState == .recording || recordState == .recordingTimeout else {
             return
         }
 
         recordState = .stopping
+
+        lock.lock()
+        defer { lock.unlock() }
+
         audioEngine.stop()
 
         // 刷新 Opus 编码器缓冲区, 发送所有剩余数据
@@ -358,7 +359,6 @@ extension AudioSinkNodeRecorder {
                 case .notificationReceived(.serverTimeout),
                      .notificationReceived(.recordingTimeout),
                      .notificationReceived(.error):
-                    self?.recordState = .recordingTimeout
                     self?.resetState()
                 case .notificationReceived(.serverUnavailable):
                     log.error("Server unavailable, stop recording")
