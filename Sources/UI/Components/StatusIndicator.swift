@@ -19,7 +19,7 @@ struct StatusIndicator: View {
     let minInnerRatio: CGFloat = 0.2 // 内圆最小为外圆的20%
     let maxInnerRatio: CGFloat = 0.7 // 内圆最大为外圆的70%
 
-    private let overlay = OverlayController.shared
+    private var overlay: OverlayController { OverlayController.shared }
     @State private var isHovered: Bool = false
     @State private var tooltipPanelId: UUID?
     @State private var isTranslateMode: Bool = Config.shared.TEXT_PROCESS_MODE == .translate
@@ -129,18 +129,21 @@ struct StatusIndicator: View {
         .animation(.quickSpringAnimation, value: recordState)
         .onHover { hovering in
             guard ConnectionCenter.shared.audioRecorderState == .idle else { return }
-            StatusPanelManager.shared.ignoresMouseEvents(ignore: !hovering)
             isHovered = hovering
 
-            if hovering {
-                let uuid = overlay.showOverlay { panelId in
-                    Tooltip(panelID: panelId, content: "按住 fn 开始语音输入 或  点击进行设置", type: .plain, showBell: false)
-                }
-                tooltipPanelId = uuid
-            } else {
-                if let panelId = tooltipPanelId {
-                    overlay.hideOverlay(uuid: panelId)
-                    tooltipPanelId = nil
+            // Suitable for macOS 10.15
+            Task { @MainActor in
+                StatusPanelManager.shared.ignoresMouseEvents(ignore: !hovering)
+                if hovering {
+                    let uuid = overlay.showOverlay { panelId in
+                        Tooltip(panelID: panelId, content: "按住 fn 开始语音输入 或  点击进行设置", type: .plain, showBell: false)
+                    }
+                    tooltipPanelId = uuid
+                } else {
+                    if let panelId = tooltipPanelId {
+                        overlay.hideOverlay(uuid: panelId)
+                        tooltipPanelId = nil
+                    }
                 }
             }
         }

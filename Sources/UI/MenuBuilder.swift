@@ -4,7 +4,7 @@ import AppKit
 final class MenuBuilder {
     static let shared = MenuBuilder()
     private var settingsPanelId: UUID?
-    private let overlay = OverlayController.shared
+    private var overlay: OverlayController { OverlayController.shared }
 
     @objc private func handleShortcutSettings() {
         if let panelId = settingsPanelId, overlay.isVisible(uuid: panelId) {

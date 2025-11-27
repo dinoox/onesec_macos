@@ -6,7 +6,7 @@ struct StatusView: View {
     @State var recording = RecordingState()
     @State var notificationPanelId: UUID?
 
-    private let overlay = OverlayController.shared
+    private var overlay: OverlayController { OverlayController.shared }
 
     var body: some View {
         // 状态指示器
