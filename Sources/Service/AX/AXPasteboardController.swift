@@ -17,20 +17,6 @@ struct PasteContext {
     var lastModifiedText: String
 }
 
-class PasteboardDataProvider: NSObject, NSPasteboardItemDataProvider {
-    let text: String
-    var wasRequested = false
-
-    init(text: String) {
-        self.text = text
-    }
-
-    func pasteboard(_: NSPasteboard?, item: NSPasteboardItem, provideDataForType type: NSPasteboard.PasteboardType) {
-        wasRequested = true
-        item.setString(text, forType: type)
-    }
-}
-
 class AXPasteboardController {
     private static var checkModificationTask: Task<Void, Never>?
     private static var currentCancellable: AnyCancellable?
@@ -180,14 +166,11 @@ class AXPasteboardController {
         let pasteboard = NSPasteboard.general
         let oldContents = pasteboard.string(forType: .string)
 
-        let provider = PasteboardDataProvider(text: text)
-        let item = NSPasteboardItem()
-        item.setDataProvider(provider, forTypes: [.string])
         pasteboard.clearContents()
-        pasteboard.writeObjects([item])
+        pasteboard.setString(text, forType: .string)
 
         simulatePaste()
-        await waitForPasteboardReadRequest(provider)
+        try? await sleep(200)
 
         restorePasteboard(oldContents)
     }
@@ -199,23 +182,6 @@ class AXPasteboardController {
         {
             pasteboard.clearContents()
             pasteboard.setString(oldContents, forType: .string)
-        }
-    }
-
-    static func waitForPasteboardReadRequest(_ provider: PasteboardDataProvider) async {
-        let startTime = CFAbsoluteTimeGetCurrent()
-
-        for i in 0 ..< 20 {
-            if provider.wasRequested {
-                let elapsed = (CFAbsoluteTimeGetCurrent() - startTime) * 1000
-                log.info("Paste Text Use: \(String(format: "%.1f", elapsed))ms")
-                try? await sleep(50)
-                break
-            }
-
-            // 5, 10, 20, 40, 50, 50...
-            let sleepMs = min(5.0 * pow(2.0, Double(i)), 50.0)
-            try? await sleep(UInt64(sleepMs))
         }
     }
 }
@@ -278,5 +244,19 @@ extension AXPasteboardController {
                 keyUp.post(tap: .cghidEventTap)
             }
         }
+    }
+}
+
+class PasteboardDataProvider: NSObject, NSPasteboardItemDataProvider {
+    let text: String
+    var wasRequested = false
+
+    init(text: String) {
+        self.text = text
+    }
+
+    func pasteboard(_: NSPasteboard?, item: NSPasteboardItem, provideDataForType type: NSPasteboard.PasteboardType) {
+        wasRequested = true
+        item.setString(text, forType: type)
     }
 }

@@ -289,6 +289,8 @@ private extension OverlayController {
         panel.level = .floating
         panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.hasShadow = false
+        panel.acceptsMouseMovedEvents = true
+        panel.ignoresMouseEvents = false
         panel.contentView = hosting
 
         if panel.panelType == .editable {
