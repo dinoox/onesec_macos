@@ -193,6 +193,13 @@ extension String {
 struct SymbolImage: View {
     let name: String
 
+    private static let textSymbols: [String: String] = [
+        "xmark": "✕",
+        "checkmark": "✓",
+        "doc.on.doc": "⧉",
+        "bell.fill": "🔔",
+    ]
+
     private var nsImage: NSImage? {
         guard let url = Bundle.resourceBundle.url(forResource: name, withExtension: "svg"),
               let image = NSImage(contentsOf: url) else { return nil }
@@ -201,11 +208,10 @@ struct SymbolImage: View {
     }
 
     var body: some View {
-        if let nsImage = nsImage {
-            Image(nsImage: nsImage)
-                .resizable()
-                .aspectRatio(contentMode: .fit)
-                .frame(width: 12, height: 12)
+        if let symbol = Self.textSymbols[name] {
+            Text(symbol).font(.system(size: 12))
+        } else {
+            Text(name).font(.system(size: 12))
         }
     }
 
@@ -238,7 +244,7 @@ extension View {
         if #available(macOS 14.0, *) {
             self.symbolEffect(.appear.byLayer.wholeSymbol, options: .nonRepeating, isActive: !isActive)
         } else {
-            self.opacity(isActive ? 1.0 : 0.0)
+            opacity(isActive ? 1.0 : 0.0)
                 .animation(.easeInOut(duration: 0.2), value: isActive)
         }
     }
