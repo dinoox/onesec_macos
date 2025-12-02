@@ -22,7 +22,7 @@ enum AppEvent {
     case userDataUpdated(UserDataUpdateType)
     //
     case hotkeySettingStarted(mode: RecordMode)
-    case hotkeySettingEnded(mode: RecordMode, hotkeyCombination: [String])
+    case hotkeySettingEnded(mode: RecordMode)
     case hotkeySettingUpdated(mode: RecordMode, hotkeyCombination: [String])
     case hotkeySettingResulted(mode: RecordMode, hotkeyCombination: [String], isConflict: Bool = false)
     //

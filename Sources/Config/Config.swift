@@ -45,8 +45,10 @@ class Config: ObservableObject {
     func saveHotkeySetting(mode: RecordMode, hotkeyCombination: [String]) {
         let modeString = mode == .normal ? "normal" : "command"
 
-        if let index: Array<UserConfig.HotkeyConfig>.Index = USER_CONFIG.hotkeyConfigs.firstIndex(where: { $0.mode == modeString }) {
+        if let index = USER_CONFIG.hotkeyConfigs.firstIndex(where: { $0.mode == modeString }) {
             USER_CONFIG.hotkeyConfigs[index] = UserConfig.HotkeyConfig(mode: modeString, hotkeyCombination: hotkeyCombination)
+        } else {
+            USER_CONFIG.hotkeyConfigs.append(UserConfig.HotkeyConfig(mode: modeString, hotkeyCombination: hotkeyCombination))
         }
         UserConfigService.shared.saveUserConfig(USER_CONFIG)
         log.info("Hotkey updated for mode: \(mode), combination: \(hotkeyCombination)")

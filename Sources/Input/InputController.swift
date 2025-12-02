@@ -203,10 +203,7 @@ extension InputController {
                 switch event {
                 case let .hotkeySettingStarted(mode):
                     self?.keyEventProcessor.startHotkeySetting(mode: mode)
-                case let .hotkeySettingEnded(mode, hotkeyCombination):
-                    self?.keyEventProcessor.endHotkeySetting()
-                    Config.shared.saveHotkeySetting(mode: mode, hotkeyCombination: hotkeyCombination)
-                case .hotkeySettingResulted:
+                case .hotkeySettingEnded, .hotkeySettingResulted:
                     self?.keyEventProcessor.endHotkeySetting()
                 default:
                     break

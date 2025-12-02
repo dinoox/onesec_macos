@@ -44,9 +44,10 @@ final class UDSClient: @unchecked Sendable {
             .sink { [weak self] event in
                 switch event {
                 case .notificationReceived(.authTokenFailed): self?.sendAuthTokenFailed()
-                case let .hotkeySettingEnded(mode, hotkeyCombination):
-                    self?.sendHotkeySettingResult(mode: mode, hotkeyCombination: hotkeyCombination)
+                case let .hotkeySettingUpdated(mode, hotkeyCombination):
+                    self?.sendHotkeySettingUpdate(mode: mode, hotkeyCombination: hotkeyCombination)
                 case let .hotkeySettingResulted(mode, hotkeyCombination, isConflict):
+                    self?.sendHotkeySettingEnd(mode: mode, hotkeyCombination: hotkeyCombination, isConflict: isConflict)
                     if !isConflict {
                         self?.sendHotkeySettingResult(mode: mode, hotkeyCombination: hotkeyCombination)
                     }
@@ -182,6 +183,10 @@ extension UDSClient {
             handleConfigUpdatedMessage(json: json, timestamp: timestamp)
         case .authTokenFailed:
             handleAuthTokenFailed()
+        case .hotkeySettingStart:
+            handleHotkeySettingStart(json: json)
+        case .hotkeySettingEnd:
+            handleHotkeySettingEnd(json: json)
         default:
             break
         }
@@ -202,8 +207,31 @@ extension UDSClient {
     }
 
     func handleAuthTokenFailed() {
-        // ConnectionCenter.shared.cleanInputService()
         ConnectionCenter.shared.isAuthed = false
+    }
+
+    private func handleHotkeySettingStart(json: [String: Any]) {
+        guard let data = json["data"] as? [String: Any],
+              let modeString = data["mode"] as? String,
+              let mode = RecordMode(rawValue: modeString)
+        else {
+            return
+        }
+        Task { @MainActor in
+            EventBus.shared.publish(.hotkeySettingStarted(mode: mode))
+        }
+    }
+
+    private func handleHotkeySettingEnd(json: [String: Any]) {
+        guard let data = json["data"] as? [String: Any],
+              let modeString = data["mode"] as? String,
+              let mode = RecordMode(rawValue: modeString)
+        else {
+            return
+        }
+        Task { @MainActor in
+            EventBus.shared.publish(.hotkeySettingEnded(mode: mode))
+        }
     }
 
     func sendAuthTokenFailed(reason: String = "UnAuth", statusCode: Int? = nil) {
@@ -237,6 +265,29 @@ extension UDSClient {
 
         sendJSONMessage(WebSocketMessage.create(type: .hotkeySettingResult, data: data).toJSON())
         log.info("Client send hotkey setting result: mode=\(mode), combination=\(hotkeyCombination)")
+    }
+
+    func sendHotkeySettingUpdate(mode: RecordMode, hotkeyCombination: [String]) {
+        guard connectionState == .connected else { return }
+
+        let data: [String: Any] = [
+            "mode": mode.rawValue,
+            "hotkey_combination": hotkeyCombination,
+        ]
+
+        sendJSONMessage(WebSocketMessage.create(type: .hotkeySettingUpdate, data: data).toJSON())
+    }
+
+    func sendHotkeySettingEnd(mode: RecordMode, hotkeyCombination: [String], isConflict: Bool) {
+        guard connectionState == .connected else { return }
+
+        let data: [String: Any] = [
+            "mode": mode.rawValue,
+            "hotkey_combination": hotkeyCombination,
+            "is_conflict": isConflict,
+        ]
+
+        sendJSONMessage(WebSocketMessage.create(type: .hotkeySettingResult, data: data).toJSON())
     }
 
     func sendJSONMessage(_ message: [String: Any]) {

@@ -3,25 +3,7 @@ import AppKit
 @MainActor
 final class MenuBuilder {
     static let shared = MenuBuilder()
-    private var settingsPanelId: UUID?
     private var overlay: OverlayController { OverlayController.shared }
-
-    @objc private func handleShortcutSettings() {
-        if let panelId = settingsPanelId, overlay.isVisible(uuid: panelId) {
-            overlay.hideOverlay(uuid: panelId)
-            settingsPanelId = nil
-        } else {
-            let uuid = overlay.showOverlay { [weak self] _ in
-                ShortcutSettingsCard(onClose: {
-                    if let panelId = self?.settingsPanelId {
-                        self?.overlay.hideOverlay(uuid: panelId)
-                        self?.settingsPanelId = nil
-                    }
-                })
-            }
-            settingsPanelId = uuid
-        }
-    }
 
     @objc private func handleTextModeChange(_ sender: NSMenuItem) {
         let modes: [TextProcessMode] = [.auto, .format]
@@ -39,11 +21,6 @@ final class MenuBuilder {
 
     func showMenu(in view: NSView) {
         let menu = NSMenu()
-
-        let shortcutItem = NSMenuItem(title: "快捷键设置", action: #selector(handleShortcutSettings), keyEquivalent: "")
-        shortcutItem.target = self
-        menu.addItem(shortcutItem)
-        menu.addItem(NSMenuItem.separator())
 
         let textModeItem = NSMenuItem(title: "识别风格", action: nil, keyEquivalent: "")
         let textModeSubmenu = NSMenu()

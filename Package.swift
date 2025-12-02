@@ -41,7 +41,6 @@ let package = Package(
             path: "Sources",
             resources: [
                 .process("Resources/Sounds"),
-                .process("Resources/Symbols"),
             ],
             linkerSettings: [
                 .unsafeFlags(["-Xlinker", "-rpath", "-Xlinker", "@executable_path/../Frameworks"]),

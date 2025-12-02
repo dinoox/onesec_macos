@@ -15,11 +15,16 @@ enum MessageType: String, CaseIterable {
     case modeUpgrade = "mode_upgrade"
     case configUpdated = "config_updated"
     case authTokenFailed = "auth_token_failed"
-    case hotkeySettingResult = "hotkey_setting_result"
     case contextUpdated = "context_update"
     case resourceRequested = "resource_requested"
     case terminalLinuxChoice = "terminal_linux_choice"
     case error
+
+    //
+    case hotkeySettingResult = "hotkey_setting_result"
+    case hotkeySettingEnd = "hotkey_setting_end"
+    case hotkeySettingUpdate = "hotkey_setting_update"
+    case hotkeySettingStart = "hotkey_setting_start"
 }
 
 struct WebSocketMessage {

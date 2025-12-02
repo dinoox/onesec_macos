@@ -50,7 +50,7 @@ class UserConfigService {
 
         if let data = try? encoder.encode(config) {
             try? data.write(to: fileURL)
-            log.info("UserConfig saved")
+            log.info("UserConfig saved \(config)")
         }
     }
 
