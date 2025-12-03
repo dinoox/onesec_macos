@@ -55,10 +55,10 @@ class ContextService {
         }
 
         // 方法1: 直接获取选中文本
-        if let text: String = AXElementAccessor.getAttributeValue(
+        if let text: String? = AXElementAccessor.getAttributeValue(
             element: element,
             attribute: kAXSelectedTextAttribute,
-        ), !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+        ) {
             return text
         }
 
@@ -67,13 +67,12 @@ class ContextService {
             element: element,
             attribute: kAXSelectedTextRangeAttribute
         ) {
-            if let text: String =
+            if let text: String? =
                 AXElementAccessor.getParameterizedAttributeValue(
                     element: element,
                     attribute: kAXStringForRangeParameterizedAttribute,
                     parameter: range
-                ),
-                !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                )
             {
                 return text
             }

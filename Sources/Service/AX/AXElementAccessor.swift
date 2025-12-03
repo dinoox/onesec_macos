@@ -25,10 +25,10 @@ class AXElementAccessor {
             return nil
         }
 
-        if T.self == String.self {
-            let stringValue = "\(value)"
-            return (stringValue.isEmpty ? nil : stringValue) as? T
-        }
+        // if T.self == String.self {
+        //     let stringValue = "\(value)"
+        //     return (stringValue.isEmpty ? nil : stringValue) as? T
+        // }
 
         return value as? T
     }
