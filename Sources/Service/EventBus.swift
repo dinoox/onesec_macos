@@ -30,6 +30,7 @@ enum AppEvent {
     //
     case mouseScreenChanged(screen: NSScreen)
     case recordingContextUpdated(context: AppContext)
+    case audioDeviceChanged
 }
 
 class EventBus: @unchecked Sendable {

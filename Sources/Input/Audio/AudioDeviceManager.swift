@@ -159,6 +159,7 @@ class AudioDeviceManager {
         let result = AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, size, &mutableDeviceID)
         if result == noErr {
             log.info("Changed Audio Input Device: \(deviceID)")
+            EventBus.shared.publish(.audioDeviceChanged)
         } else {
             log.error("Failed to change audio input device: \(result)")
         }

@@ -306,6 +306,19 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         stopRecordingTimers()
     }
 
+    /// 音频设备变更后重新配置引擎
+    func reconfigureAudioEngine() {
+        guard recordState == .idle else {
+            log.warning("Error reconfig state")
+            return
+        }
+
+        audioEngine.stop()
+        audioEngine = AVAudioEngine()
+        setupAudioEngine()
+        log.info("✅ 音频引擎已重新配置")
+    }
+
     /// 计算音频缓冲区的音量 限制在 0-1 范围内
     private func calculateVolume(from buffer: AVAudioPCMBuffer) -> Float {
         guard let audioBuffer = buffer.audioBufferList.pointee.mBuffers.mData else {
@@ -371,6 +384,10 @@ extension AudioSinkNodeRecorder {
                     log.error("Server unavailable, stop recording")
                     Task { @MainActor in
                         self?.stopRecording(stopState: .idle)
+                    }
+                case .audioDeviceChanged:
+                    Task { @MainActor in
+                        self?.reconfigureAudioEngine()
                     }
                 default:
                     break
