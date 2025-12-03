@@ -32,7 +32,6 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     private var opusFramesPerPacket = 20 // 默认聚合 200ms
 
     private var audioQueue: Deque<Data> = .init()
-    private let lock = NSLock()
 
     // 响应式流处理
     private var cancellables = Set<AnyCancellable>()
@@ -219,6 +218,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
 
     // MARK: - 录音处理
 
+    @MainActor
     func startRecording(mode: RecordMode = .normal) {
         guard recordState == .idle else {
             log.warning("Cant Start recording, now state: \(recordState)")
@@ -239,6 +239,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         log.info("🎙️ Start Recording")
     }
 
+    @MainActor
     func stopRecording(stopState: RecordState = .processing) {
         log.info("✅ Stop recording with state \(stopState), current state \(recordState)")
         guard recordState == .recording || recordState == .recordingTimeout else {
@@ -247,9 +248,6 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
 
         recordState = .stopping
         audioEngine.stop()
-
-        lock.lock()
-        defer { lock.unlock() }
 
         // 刷新 Opus 编码器缓冲区, 发送所有剩余数据
         if let encoder = opusEncoder, let finalData = encoder.flush() {
@@ -275,17 +273,14 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
             recordState = .idle
         }
 
-        log.info("✅ Recording Stopped ")
+        log.info("✅ Recording Stopped")
     }
 
+    @MainActor
     func resetState() {
         // 重置状态
         recordState = .idle
         audioEngine.stop()
-
-        lock.lock()
-        defer { lock.unlock() }
-
         audioQueue.removeAll()
 
         // 重置统计数据
@@ -451,7 +446,9 @@ extension AudioSinkNodeRecorder {
             log.warning("Set queue start time")
         } else if let startTime = queueStartTime, Date().timeIntervalSince(startTime) >= 2.0 {
             log.error("Audio queue timeout: failed to establish connection within 2 seconds.")
-            stopRecording(stopState: queueStartTime == nil ? .idle : .processing)
+            Task { @MainActor in
+                self.stopRecording(stopState: queueStartTime == nil ? .idle : .processing)
+            }
             EventBus.shared.publish(.notificationReceived(.recordingTimeout))
         }
     }
@@ -470,7 +467,9 @@ extension AudioSinkNodeRecorder {
                 recordingLimitTimer = Timer.scheduledTimer(withTimeInterval: warningBeforeTimeout, repeats: false) { [weak self] _ in
                     guard let self, recordState == .recording else { return }
                     log.warning("Recording timeout: exceeded \(maxRecordingDuration) seconds")
-                    stopRecording()
+                    Task { @MainActor in
+                        self.stopRecording()
+                    }
                 }
             }
         }

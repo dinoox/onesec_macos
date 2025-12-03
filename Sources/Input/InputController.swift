@@ -182,11 +182,15 @@ class InputController {
             ConnectionCenter.shared.connectWss()
         }
 
-        audioRecorder.startRecording(mode: mode)
+        Task { @MainActor in
+            self.audioRecorder.startRecording(mode: mode)
+        }
     }
 
     private func stopRecording() {
-        audioRecorder.stopRecording()
+        Task { @MainActor in
+            self.audioRecorder.stopRecording()
+        }
     }
 
     private func modeUpgrade(from _: RecordMode, to: RecordMode) {

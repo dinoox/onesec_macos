@@ -36,7 +36,7 @@ struct NotificationCard: View {
         type: NotificationType = .warning,
         autoHide: Bool = true,
         showTimerTip: Bool = false,
-        autoCloseDuration: Int = 3,
+        autoCloseDuration: Int = 4,
         onTap: (() -> Void)? = nil,
         onClose: (() -> Void)? = nil
     ) {
