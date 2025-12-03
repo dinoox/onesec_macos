@@ -38,7 +38,7 @@ extension StatusView {
     private func handleEvent(_ event: AppEvent) {
         switch event {
         case let .volumeChanged(volume):
-            recording.volume = min(1.0, max(0.0, CGFloat(volume)))
+            recording.volume = CGFloat(volume)
         case let .recordingStarted(mode):
             recording.mode = mode
             recording.state = .recording
@@ -63,10 +63,16 @@ extension StatusView {
             var showTimerTip = false
             var autoCloseDuration = 3
             if notificationType != .recordingTimeoutWarning {
+                log.info("Reset recording state to idle")
                 recording.state = .idle
+                recording.volume = 0
             } else {
                 showTimerTip = true
                 autoCloseDuration = 15
+            }
+
+            if notificationType == .serverUnavailable {
+                return
             }
 
             if notificationType == .authTokenFailed {
@@ -75,6 +81,7 @@ extension StatusView {
 
             showNotificationMessage(
                 title: notificationType.title, content: notificationType.content,
+                type: (notificationType == .authTokenFailed || notificationType.isError) ? .error : .warning,
                 autoHide: autoHide,
                 showTimerTip: showTimerTip,
                 autoCloseDuration: autoCloseDuration,
@@ -176,8 +183,9 @@ extension StatusView {
         }
     }
 
-    private func showNotificationMessage(
+    func showNotificationMessage(
         title: String, content: String,
+        type: NotificationType = .warning,
         autoHide: Bool = true, onTap: (() -> Void)? = nil,
         showTimerTip: Bool = false, autoCloseDuration: Int = 3,
     ) {
@@ -187,6 +195,7 @@ extension StatusView {
                     title: title,
                     content: content,
                     panelId: panelId,
+                    type: type,
                     autoHide: autoHide,
                     showTimerTip: showTimerTip,
                     autoCloseDuration: autoCloseDuration,

@@ -13,6 +13,8 @@ let starlightYellow = Color(hex: "#FFD479")
 let borderGrey = Color(hex: "#888888B2")
 let destructiveRed = Color(hex: "#FF383C")
 
+let yellowTextColor = Color(hex: "#F7BF1EFF")
+let errorTextColor = Color(hex: "#D83036FF")
 // MARK: - 自适应主题颜色 根据系统外观自动切换
 
 extension Color {
@@ -43,7 +45,7 @@ extension Color {
     }
 
     static var overlaySecondaryPrimary: Color {
-        adaptive(light: Color(hex: "#00af5f"), dark: Color(hex: "#ffcc00"))
+        adaptive(light: Color(hex: "#00af5f"), dark: yellowTextColor)
     }
 
     /// Overlay 背景色：亮色模式白色，暗色模式黑色

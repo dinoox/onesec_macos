@@ -92,7 +92,7 @@ enum NotificationMessageType: Equatable {
         case .recordingTimeoutWarning:
             "录音即将超时"
         case .authTokenFailed:
-            JWTValidator.isValid(Config.shared.USER_CONFIG.authToken) ? "鉴权失败" : "未登录"
+            JWTValidator.isValid(Config.shared.USER_CONFIG.authToken) ? "验证失败" : "未登录"
         case .serverUnavailable:
             "服务不可用"
         case .networkUnavailable:
@@ -113,7 +113,7 @@ enum NotificationMessageType: Equatable {
         case .recordingTimeoutWarning:
             "录音将在15秒后自动停止"
         case .authTokenFailed:
-            JWTValidator.isValid(Config.shared.USER_CONFIG.authToken) ? "用户鉴权失败，请返回客户端重新登陆" : "用户未登录，请登陆后使用"
+            JWTValidator.isValid(Config.shared.USER_CONFIG.authToken) ? "请返回客户端重新登陆" : "用户未登录，请登陆后使用"
         case .serverUnavailable:
             "服务不可用，请检查网络连接"
         case .networkUnavailable:
@@ -123,6 +123,11 @@ enum NotificationMessageType: Equatable {
         case let .error(_, content):
             content
         }
+    }
+
+    var isError: Bool {
+        if case .error = self { return true }
+        return false
     }
 }
 

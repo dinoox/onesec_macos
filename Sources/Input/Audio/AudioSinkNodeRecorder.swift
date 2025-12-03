@@ -370,7 +370,7 @@ extension AudioSinkNodeRecorder {
                 case .notificationReceived(.serverUnavailable):
                     log.error("Server unavailable, stop recording")
                     Task { @MainActor in
-                        self?.stopRecording()
+                        self?.stopRecording(stopState: .idle)
                     }
                 default:
                     break
