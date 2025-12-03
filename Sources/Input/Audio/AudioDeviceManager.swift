@@ -80,12 +80,31 @@ class AudioDeviceManager {
         }
         
         for deviceID in deviceIDs {
-            if hasInputChannels(deviceID), let name = getDeviceName(deviceID), let uid = getDeviceUID(deviceID) {
+            if hasInputChannels(deviceID),
+               !isAggregateDevice(deviceID),
+               let name = getDeviceName(deviceID),
+               let uid = getDeviceUID(deviceID) {
                 devices.append(AudioDevice(id: deviceID, name: name, uid: uid))
             }
         }
         
         return devices
+    }
+    
+    // 这是 macOS 系统创建的聚合设备（Aggregate Device）
+    // 通常由系统或某些应用自动生成，用于组合多个音频设备。不是真正的物理设备
+    private func isAggregateDevice(_ deviceID: AudioDeviceID) -> Bool {
+        var transportType: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyTransportType,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        guard AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &transportType) == noErr else {
+            return false
+        }
+        return transportType == kAudioDeviceTransportTypeAggregate
     }
     
     private func hasInputChannels(_ deviceID: AudioDeviceID) -> Bool {
