@@ -24,9 +24,9 @@ struct Tooltip: View {
     private var backgroundColor: Color {
         switch type {
         case .primary:
-            return Color.overlayPrimary
+            return Color.overlayBackground
         case .error:
-            return destructiveRed
+            return Color.overlaySecondaryBackground
         case .plain:
             return Color.overlayBackground
         }
@@ -35,7 +35,7 @@ struct Tooltip: View {
     private var textColor: Color {
         switch type {
         case .primary:
-            return .black
+            return .overlaySecondaryPrimary
         case .error:
             return .black
         case .plain:
@@ -46,7 +46,7 @@ struct Tooltip: View {
     private var borderColor: Color {
         switch type {
         case .primary:
-            return Color.overlayPrimary.opacity(0.8)
+            return Color.overlayBorder.opacity(0.5)
         case .error:
             return Color.overlayBorder.opacity(0.8)
         case .plain:

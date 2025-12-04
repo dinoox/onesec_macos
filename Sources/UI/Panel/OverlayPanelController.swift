@@ -79,18 +79,6 @@ class OverlayController {
             contentSize: contentSize
         )
 
-        // if let panelType = panelType, let existingUUID = findPanelByType(panelType) {
-        //     moveAndUpdateExistingPanel(
-        //         uuid: existingUUID,
-        //         content: content,
-        //         origin: origin,
-        //         contentSize: contentSize,
-        //         extraHeight: extraHeight
-        //     )
-
-        //     return existingUUID
-        // }
-
         hosting.onSizeChanged = { [weak self] in
             self?.handlePanelSizeChange(uuid: uuid)
         }
@@ -157,17 +145,6 @@ class OverlayController {
             contentSize: contentSize,
             screenFrame: screen.frame
         )
-
-        // if let panelType = panelType, let existingUUID = findPanelByType(panelType) {
-        //     moveAndUpdateExistingPanel(
-        //         uuid: existingUUID,
-        //         content: content,
-        //         origin: origin,
-        //         contentSize: contentSize,
-        //         extraHeight: extraHeight
-        //     )
-        //     return existingUUID
-        // }
 
         let panel = createPanel(origin: origin, size: contentSize, extraHeight: extraHeight, panelType: panelType)
         panel.panelType = panelType

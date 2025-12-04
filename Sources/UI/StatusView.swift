@@ -100,7 +100,6 @@ extension StatusView {
             ])
         case let .serverResultReceived(text, _, processMode, polishedText):
             recording.state = .idle
-            // LinuxCommandCard.show(commands: [LinuxCommand(distro: "", command: "asd\nsad", displayName: "")])
             if text.isEmpty {
                 return
             }
