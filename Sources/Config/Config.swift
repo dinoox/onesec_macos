@@ -15,7 +15,7 @@ class Config: ObservableObject {
     @Published var UDS_CHANNEL: String = ""
     @Published var SERVER: String = ""
 
-    @Published var TEXT_PROCESS_MODE: TextProcessMode = .translate
+    @Published var TEXT_PROCESS_MODE: TextProcessMode = .auto
     @Published var USER_CONFIG = UserConfigService.shared.loadUserConfig() {
         didSet {
             log.info("Theme changed: \(oldValue.theme) -> \(USER_CONFIG.theme)")
