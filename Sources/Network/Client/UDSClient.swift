@@ -43,6 +43,7 @@ final class UDSClient: @unchecked Sendable {
         EventBus.shared.events
             .sink { [weak self] event in
                 switch event {
+                case .userDataUpdated(.environment): self?.sendUserConfigUpdated()
                 case .notificationReceived(.authTokenFailed): self?.sendAuthTokenFailed()
                 case let .hotkeySettingUpdated(mode, hotkeyCombination):
                     self?.sendHotkeySettingUpdate(mode: mode, hotkeyCombination: hotkeyCombination)
@@ -265,6 +266,11 @@ extension UDSClient {
 
         sendJSONMessage(WebSocketMessage.create(type: .hotkeySettingResult, data: data).toJSON())
         log.info("Client send hotkey setting result: mode=\(mode), combination=\(hotkeyCombination)")
+    }
+
+    func sendUserConfigUpdated() {
+        guard connectionState == .connected else { return }
+        sendJSONMessage(WebSocketMessage.create(type: .configUpdated, data: nil).toJSON())
     }
 
     func sendHotkeySettingUpdate(mode: RecordMode, hotkeyCombination: [String]) {

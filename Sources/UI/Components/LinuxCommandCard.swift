@@ -137,6 +137,7 @@ struct CommandItem: View {
 
                     if response.success == true {
                         Tooltip.show(content: "系统偏好已更新")
+                        EventBus.shared.publish(.userDataUpdated(.environment))
                     }
                 }
 

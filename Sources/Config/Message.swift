@@ -158,6 +158,7 @@ enum NotificationMessageType: Equatable {
 enum UserDataUpdateType {
     case auth
     case config
+    case environment
 }
 
 // MARK: - 记录当前激活应用的基本信息
