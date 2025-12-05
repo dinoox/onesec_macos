@@ -8,6 +8,7 @@
 import Carbon
 import Cocoa
 import Combine
+import os.lock
 
 /// 全局 Input 控制器
 /// 负责监听配置的按键组合的按下和松开事件，控制录音的开始和停止
@@ -17,7 +18,7 @@ class InputController {
 
     /// 事件监听器
     private var eventTap: CFMachPort?
-    private let eventQueue = DispatchQueue(label: "com.onesec.inputcontroller", qos: .userInteractive)
+    private var eventLock = os_unfair_lock_s()
 
     /// 运行循环源
     private var runLoopSource: CFRunLoopSource?
@@ -96,9 +97,9 @@ class InputController {
             return Unmanaged.passUnretained(event)
         }
 
-        eventQueue.async { [weak self] in
-            self?.handleCGEventInternal(proxy: proxy, type: type, event: event)
-        }
+        os_unfair_lock_lock(&eventLock)
+        defer { os_unfair_lock_unlock(&eventLock) }
+        handleCGEventInternal(proxy: proxy, type: type, event: event)
 
         return Unmanaged.passUnretained(event)
     }

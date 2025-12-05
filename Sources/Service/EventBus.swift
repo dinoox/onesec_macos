@@ -8,6 +8,7 @@
 import AppKit
 import Combine
 import Foundation
+import os
 
 enum AppEvent {
     case volumeChanged(volume: Float)
@@ -35,10 +36,14 @@ enum AppEvent {
 
 class EventBus: @unchecked Sendable {
     static let shared = EventBus()
+
     let eventSubject = PassthroughSubject<AppEvent, Never>()
+    private var lock = os_unfair_lock_s()
 
     // 发布事件
     func publish(_ event: AppEvent) {
+        os_unfair_lock_lock(&lock)
+        defer { os_unfair_lock_unlock(&lock) }
         eventSubject.send(event)
     }
 

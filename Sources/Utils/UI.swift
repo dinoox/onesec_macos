@@ -203,7 +203,7 @@ struct SymbolImage: View {
         "doc.on.doc": "⧉",
         "bell.fill": "🔔",
         "sparkles": "✨",
-        "microphone": "🎤",
+        "mic": "🎤",
     ]
 
     private var nsImage: NSImage? {

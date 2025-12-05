@@ -284,12 +284,22 @@ private extension OverlayController {
             panel.wasDragged = true
         }
 
-        if panel.panelType == .editable ||
-            ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 11
-        {
+        let shouldSuitMacos10_15 = ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 11
+
+        if shouldSuitMacos10_15 {
+            panel.acceptsMouseMovedEvents = true
+        }
+
+        if panel.panelType == .editable || shouldSuitMacos10_15 {
             panel.makeKeyAndOrderFront(nil)
         } else {
             panel.orderFront(nil)
+        }
+
+        if shouldSuitMacos10_15 {
+            Task { @MainActor in
+                hosting.updateTrackingAreasRecursively()
+            }
         }
     }
 

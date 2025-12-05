@@ -22,10 +22,8 @@ enum PanelType: Equatable {
 
     var titleIcon: String {
         switch self {
-        case .translate, .command, .editable:
+        case .translate(.selection), .translate(.bottom), .command, .editable:
             return "sparkles"
-        case .notification:
-            return "mic"
         default:
             return "mic"
         }
@@ -163,5 +161,14 @@ class EditablePanel: NSPanel {
             }
         }
         return super.performKeyEquivalent(with: event)
+    }
+}
+
+extension NSView {
+    func updateTrackingAreasRecursively() {
+        updateTrackingAreas()
+        for subview in subviews {
+            subview.updateTrackingAreasRecursively()
+        }
     }
 }
