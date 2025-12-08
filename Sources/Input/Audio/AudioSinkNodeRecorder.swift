@@ -240,7 +240,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     }
 
     @MainActor
-    func stopRecording(stopState: RecordState = .processing) {
+    func stopRecording(stopState: RecordState = .processing, shouldSetResponseTimer: Bool = true) {
         log.info("✅ Stop recording with state \(stopState), current state \(recordState)")
         guard recordState == .recording || recordState == .recordingTimeout else {
             return
@@ -264,7 +264,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
 
         // 只有真正开始录音才需要等待服务器响应
         if isRecordingStarted {
-            EventBus.shared.publish(.recordingStopped)
+            EventBus.shared.publish(.recordingStopped(shouldSetResponseTimer: shouldSetResponseTimer))
             recordState = stopState
             if recordingStartTime != nil {
                 printRecordingStatistics()
@@ -378,7 +378,11 @@ extension AudioSinkNodeRecorder {
                 case .notificationReceived(.serverUnavailable(duringRecording: true)):
                     log.error("Server unavailable, stop recording")
                     Task { @MainActor in
-                        self?.stopRecording(stopState: .idle)
+                        if self?.recordState == .processing {
+                            self?.resetState()
+                        } else {
+                            self?.stopRecording(stopState: .idle, shouldSetResponseTimer: false)
+                        }
                     }
                 case .audioDeviceChanged:
                     Task { @MainActor in
@@ -429,7 +433,7 @@ extension AudioSinkNodeRecorder {
         guard !isRecordingStarted else { return }
 
         isRecordingStarted = true
-        EventBus.shared.publish(.recordingStarted(recordMode: recordMode))
+        EventBus.shared.publish(.recordingStarted(mode: recordMode))
     }
 
     func handleModeUpgrade() {
@@ -441,15 +445,19 @@ extension AudioSinkNodeRecorder {
     }
 
     private func checkAndHandleTimeout() {
+        guard !isRecordingStarted else { return }
+        
         if queueStartTime == nil {
             queueStartTime = Date()
             log.warning("Set queue start time")
+            EventBus.shared.publish(.recordingCacheStarted(mode: recordMode))
         } else if let startTime = queueStartTime, Date().timeIntervalSince(startTime) >= 2.0 {
             log.error("Audio queue timeout: failed to establish connection within 2 seconds.")
             Task { @MainActor in
                 self.stopRecording(stopState: queueStartTime == nil ? .idle : .processing)
+                EventBus.shared.publish(.recordingCacheTimeout)
+                EventBus.shared.publish(.notificationReceived(.networkUnavailable))
             }
-            EventBus.shared.publish(.notificationReceived(.serverUnavailable(duringRecording: true)))
         }
     }
 }

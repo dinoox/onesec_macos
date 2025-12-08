@@ -86,6 +86,9 @@ private struct ContentItemView: View {
     }
 
     private func handleCopyContent() {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(item.content, forType: .string)
+        
         withAnimation {
             isCopied = true
         }

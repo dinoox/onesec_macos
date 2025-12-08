@@ -37,12 +37,21 @@ struct StatusView: View {
 extension StatusView {
     private func handleEvent(_ event: AppEvent) {
         switch event {
+        case let .recordingCacheStarted(mode):
+            guard recording.state == .idle else { return }
+            recording.mode = mode
+            recording.state = .recording
+        case .recordingCacheTimeout:
+            recording.state = .idle
+            recording.volume = 0
         case let .volumeChanged(volume):
+            guard recording.state != .idle else { return }
             recording.volume = CGFloat(volume)
         case let .recordingStarted(mode):
             recording.mode = mode
             recording.state = .recording
         case .recordingStopped:
+            guard recording.state == .recording else { return }
             recording.state = .processing
             recording.volume = 0
         case let .modeUpgraded(from, to):

@@ -131,7 +131,7 @@ extension WebSocketAudioStreamer {
                 switch event {
                 case let .recordingStarted(mode): sendRecordingContext(); sendStartRecording(mode: mode)
 
-                case .recordingStopped: sendStopRecording()
+                case let .recordingStopped(shouldSetResponseTimer): sendStopRecording(shouldSetResponseTimer: shouldSetResponseTimer)
 
                 case let .modeUpgraded(from, to): sendModeUpgrade(fromMode: from, toMode: to)
 
@@ -177,11 +177,13 @@ extension WebSocketAudioStreamer {
         scheduleIdleTimer()
     }
 
-    func sendStopRecording() {
+    func sendStopRecording(shouldSetResponseTimer: Bool = true) {
         Task { [weak self] in
             await self?.contextTask?.value
             self?.sendWebSocketMessage(type: .stopRecording)
-            self?.startResponseTimeoutTimer()
+            if shouldSetResponseTimer {
+                self?.startResponseTimeoutTimer()
+            }
         }
     }
 
@@ -350,6 +352,7 @@ extension WebSocketAudioStreamer {
             guard !Task.isCancelled else { return }
             log.warning("Recording started response timed out after \(recordingStartedTimeoutDuration) seconds")
             EventBus.shared.publish(.notificationReceived(.serverUnavailable(duringRecording: true)))
+            cancelResponseTimeoutTimer()
         }
         log.debug("Started recording started timeout timer (\(recordingStartedTimeoutDuration)s)")
     }

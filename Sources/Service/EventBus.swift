@@ -12,8 +12,12 @@ import os
 
 enum AppEvent {
     case volumeChanged(volume: Float)
-    case recordingStarted(recordMode: RecordMode)
-    case recordingStopped
+    case recordingStarted(mode: RecordMode)
+    case recordingStopped(shouldSetResponseTimer: Bool = true)
+    //
+    case recordingCacheStarted(mode: RecordMode)
+    case recordingCacheTimeout
+    //
     case audioDataReceived(data: Data)
     case serverResultReceived(summary: String, interactionID: String, processMode: TextProcessMode, polishedText: String)
     case terminalLinuxChoice(bundleID: String, appName: String, endpointIdentifier: String, commands: [LinuxCommand])

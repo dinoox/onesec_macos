@@ -133,11 +133,22 @@ extension ConnectionCenter {
             .sink { state in
                 guard state.previous == .connected,
                       let current = state.current,
-                      current == .disconnected || current == .cancelled
+                      current == .disconnected || current == .cancelled || current == .failed
                 else {
                     return
                 }
-                EventBus.shared.publish(.notificationReceived(.serverUnavailable(duringRecording: false)))
+                EventBus.shared.publish(.notificationReceived(.serverUnavailable(duringRecording: self.audioRecorderState != .idle)))
+            }
+            .store(in: &cancellables)
+
+        $networkState
+            .scan((previous: nil as NetworkStatus?, current: nil as NetworkStatus?)) { state, new in
+                (previous: state.current, current: new)
+            }
+            .receive(on: DispatchQueue.main)
+            .sink { state in
+                guard state.previous == .available, state.current == .unavailable else { return }
+                EventBus.shared.publish(.notificationReceived(.networkUnavailable))
             }
             .store(in: &cancellables)
     }
