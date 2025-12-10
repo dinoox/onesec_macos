@@ -66,7 +66,9 @@ class AudioDeviceManager {
         refreshDevices()
         if oldDefault != defaultInputDeviceID {
             log.info("🎧 Input Device Changed: \(getDeviceName(defaultInputDeviceID) ?? "Unknown")".yellow)
-            ConnectionCenter.shared.resetInputService()
+            Task { @MainActor in
+                EventBus.shared.publish(.audioDeviceChanged)
+            }
         }
     }
 

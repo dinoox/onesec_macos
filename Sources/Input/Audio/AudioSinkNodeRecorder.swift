@@ -110,8 +110,18 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         // 连接音频图
         audioEngine.attach(sinkNode)
         audioEngine.connect(inputNode, to: sinkNode, format: inputFormat)
+        audioEngine.prepare()
 
         log.info("✅ SinkNode 音频引擎设置完成")
+    }
+
+    @MainActor
+    private func reconfigureAudioEngine() {
+        log.info("🔄 Reconfigure Audio Engine \(audioEngine.isRunning)".yellow)
+        audioEngine.stop()
+        audioEngine = AVAudioEngine()
+        setupAudioEngine()
+        log.info("🔄 Audio engine reconfigured")
     }
 
     /// 处理 SinkNode 接收到的音频缓冲区
@@ -370,6 +380,10 @@ extension AudioSinkNodeRecorder {
                         } else {
                             self?.stopRecording(stopState: .idle, shouldSetResponseTimer: false)
                         }
+                    }
+                case .audioDeviceChanged:
+                    Task { @MainActor in
+                        self?.reconfigureAudioEngine()
                     }
                 default:
                     break
