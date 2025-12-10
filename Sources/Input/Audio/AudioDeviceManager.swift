@@ -209,8 +209,8 @@ class AudioDeviceManager {
         let size = UInt32(MemoryLayout<AudioDeviceID>.size)
         let result = AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, size, &mutableDeviceID)
         if result == noErr {
-            log.info("🎧 Input Device Changed: \(getDeviceName(defaultInputDeviceID) ?? "Unknown")".yellow)
-            ConnectionCenter.shared.resetInputService()
+            // log.info("🎧 Input Device Changed: \(getDeviceName(defaultInputDeviceID) ?? "Unknown")".yellow)
+            // ConnectionCenter.shared.resetInputService()
         } else {
             log.error("Failed to change audio input device: \(result)")
         }

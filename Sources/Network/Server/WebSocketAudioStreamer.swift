@@ -131,7 +131,7 @@ extension WebSocketAudioStreamer {
                 switch event {
                 case let .recordingStarted(mode): sendRecordingContext(); sendStartRecording(mode: mode)
 
-                case let .recordingStopped(shouldSetResponseTimer): sendStopRecording(shouldSetResponseTimer: shouldSetResponseTimer)
+                case let .recordingStopped(shouldSetResponseTimer, _): sendStopRecording(shouldSetResponseTimer: shouldSetResponseTimer)
 
                 case let .modeUpgraded(from, to): sendModeUpgrade(fromMode: from, toMode: to)
 
@@ -180,6 +180,10 @@ extension WebSocketAudioStreamer {
     }
 
     func sendStopRecording(shouldSetResponseTimer: Bool = true) {
+        guard connectionState == .connected else {
+            return
+        }
+
         Task { [weak self] in
             await self?.contextTask?.value
             self?.sendWebSocketMessage(type: .stopRecording)
@@ -276,6 +280,7 @@ extension WebSocketAudioStreamer {
 
         case .error:
             cancelRecordingStartedTimeoutTimer()
+            cancelResponseTimeoutTimer()
             guard let message = json["message"] as? String else { return }
             EventBus.shared.publish(.notificationReceived(.error(title: "错误", content: message)))
 
@@ -334,6 +339,7 @@ extension WebSocketAudioStreamer {
 extension WebSocketAudioStreamer {
     private func startResponseTimeoutTimer() {
         cancelResponseTimeoutTimer()
+        cancelRecordingStartedTimeoutTimer()
 
         responseTimeoutTask = Task { [weak self] in
             guard let self else { return }

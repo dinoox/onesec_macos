@@ -51,10 +51,18 @@ extension StatusView {
         case let .recordingStarted(mode):
             recording.mode = mode
             recording.state = .recording
-        case .recordingStopped:
+        case let .recordingStopped(shouldSetResponseTimer, wssState):
             guard recording.state == .recording else { return }
-            recording.state = .processing
+            recording.state = shouldSetResponseTimer ? .processing : .idle
             recording.volume = 0
+            if !shouldSetResponseTimer, wssState != .connected {
+                let notificationType = NotificationMessageType.networkUnavailable
+                showNotificationMessage(
+                    title: notificationType.title, content: notificationType.content,
+                    type: notificationType.type,
+                    autoHide: notificationType.shouldAutoHide,
+                )
+            }
         case let .modeUpgraded(from, to):
             log.info("Receive modeUpgraded: \(from) \(to)")
             if to == .command {

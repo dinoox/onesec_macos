@@ -12,7 +12,7 @@ import Foundation
 enum AppEvent {
     case volumeChanged(volume: Float)
     case recordingStarted(mode: RecordMode)
-    case recordingStopped(shouldSetResponseTimer: Bool = true)
+    case recordingStopped(shouldSetResponseTimer: Bool = true, wssState: ConnState = .connected)
     //
     case recordingCacheStarted(mode: RecordMode)
     case recordingCacheTimeout

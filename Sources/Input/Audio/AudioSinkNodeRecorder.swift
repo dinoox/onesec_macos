@@ -240,9 +240,11 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     }
 
     @MainActor
-    func stopRecording(stopState: RecordState = .processing, shouldSetResponseTimer: Bool = true) {
-        log.info("✅ Stop recording with state \(stopState), current state \(recordState)")
-        guard recordState == .recording || recordState == .recordingTimeout else {
+    func stopRecording(
+        stopState: RecordState = .processing,
+        shouldSetResponseTimer: Bool = true
+    ) {
+        guard recordState == .recording else {
             return
         }
 
@@ -262,17 +264,15 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
             sendAudioData(audioData)
         }
 
-        // 只有真正开始录音才需要等待服务器响应
-        if isRecordingStarted {
-            EventBus.shared.publish(.recordingStopped(shouldSetResponseTimer: shouldSetResponseTimer))
-            recordState = stopState
-            if recordingStartTime != nil {
-                printRecordingStatistics()
-            }
-        } else {
-            recordState = .idle
-        }
+        recordState = isRecordingStarted ? stopState : .idle
+        printRecordingStatistics()
 
+        EventBus.shared.publish(
+            .recordingStopped(
+                shouldSetResponseTimer: isRecordingStarted ? shouldSetResponseTimer : false,
+                wssState: ConnectionCenter.shared.wssState
+            )
+        )
         log.info("✅ Recording Stopped")
     }
 
@@ -437,7 +437,7 @@ extension AudioSinkNodeRecorder {
         } else if let startTime = queueStartTime, Date().timeIntervalSince(startTime) >= 2.0 {
             log.error("Audio queue timeout: failed to establish connection within 2 seconds.")
             Task { @MainActor in
-                self.stopRecording(stopState: queueStartTime == nil ? .idle : .processing)
+                self.stopRecording()
                 EventBus.shared.publish(.recordingCacheTimeout)
                 EventBus.shared.publish(.notificationReceived(.networkUnavailable))
             }
@@ -474,7 +474,7 @@ extension AudioSinkNodeRecorder {
 
 extension AudioSinkNodeRecorder {
     private func printRecordingStatistics() {
-        guard let startTime = recordingStartTime else { return }
+        guard let startTime = recordingStartTime, isRecordingStarted else { return }
 
         let duration = Date().timeIntervalSince(startTime)
         guard duration > 0 else { return }
