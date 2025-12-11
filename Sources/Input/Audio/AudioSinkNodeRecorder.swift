@@ -136,16 +136,10 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     private func reconfigureAudioEngine() {
         log.info("🔄 Reconfigure Audio Engine \(audioEngine.isRunning)".yellow)
         audioEngine.stop()
-        
-        // 清理旧节点
-        if let sinkNode = sinkNode {
-            audioEngine.disconnectNodeOutput(sinkNode)
-            audioEngine.detach(sinkNode)
-        }
-        if let silentSourceNode = silentSourceNode {
-            audioEngine.disconnectNodeOutput(silentSourceNode)
-            audioEngine.detach(silentSourceNode)
-        }
+        audioEngine.reset()
+        sinkNode = nil
+        silentSourceNode = nil
+        converter = nil
         
         audioEngine = AVAudioEngine()
         setupAudioEngine()
