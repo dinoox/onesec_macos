@@ -128,7 +128,7 @@ struct StatusIndicator: View {
         .animation(.quickSpringAnimation, value: outerSize)
         .animation(.quickSpringAnimation, value: isHovered)
         .animation(.quickSpringAnimation, value: recordState)
-        .onHover { hovering in
+        .compatibleHover { hovering in
             guard ConnectionCenter.shared.audioRecorderState == .idle else { return }
             isHovered = hovering
 

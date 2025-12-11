@@ -5,6 +5,7 @@
 //  Created by 王晓雨 on 2025/10/15.
 //
 
+import AudioToolbox
 import AVFoundation
 import Collections
 import Combine
@@ -102,7 +103,6 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
 
         // SinkNode Handle
         sinkNode = AVAudioSinkNode { [weak self] timestamp, frameCount, audioBufferList in
-        log.debug("SinkNode Handle: \(timestamp) \(frameCount) \(audioBufferList)")
             guard let self, recordState == .recording else { return OSStatus(noErr) }
 
             processSinkNodeBuffer(audioBufferList, frameCount: frameCount, timestamp: timestamp)
@@ -111,12 +111,11 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
 
         // 连接输入音频图
         audioEngine.attach(sinkNode)
-        audioEngine.connect(inputNode, to: sinkNode, format: inputFormat)
-        
+        audioEngine.connect(inputNode, to: sinkNode, format: nil)
+
         // 创建虚拟静音输出节点，隔离输出设备变化
         let outputFormat = audioEngine.outputNode.outputFormat(forBus: 0)
-        silentSourceNode = AVAudioSourceNode { [weak self] _, _, frameCount, audioBufferList in
-            guard let self else { return OSStatus(noErr) }
+        silentSourceNode = AVAudioSourceNode { _, _, _, audioBufferList in
             // 输出静音数据，保持 Engine 时钟源稳定
             let bufferList = UnsafeMutableAudioBufferListPointer(audioBufferList)
             for buffer in bufferList {
@@ -124,26 +123,60 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
             }
             return OSStatus(noErr)
         }
-        
+
         audioEngine.attach(silentSourceNode)
         audioEngine.connect(silentSourceNode, to: audioEngine.mainMixerNode, format: outputFormat)
         audioEngine.prepare()
 
-        log.info("✅ SinkNode 音频引擎设置完成（输出已隔离）")
+        log.info("✅ SinkNode 音频引擎设置完成")
     }
 
     @MainActor
-    private func reconfigureAudioEngine() {
+    private func reconfigureAudioEngine() async {
         log.info("🔄 Reconfigure Audio Engine \(audioEngine.isRunning)".yellow)
         audioEngine.stop()
         audioEngine.reset()
         sinkNode = nil
         silentSourceNode = nil
         converter = nil
-        
+
+        try? await sleep(1500)
         audioEngine = AVAudioEngine()
+        // applyInputDeviceSelection()
         setupAudioEngine()
         log.info("🔄 Audio engine reconfigured")
+    }
+
+    private func applyInputDeviceSelection() {
+        let targetDeviceID =
+            AudioDeviceManager.shared.selectedDeviceID
+                ?? AudioDeviceManager.shared.defaultInputDeviceID
+
+        guard targetDeviceID != 0 else {
+            log.warning("未找到可用输入设备 ID")
+            return
+        }
+
+        guard let audioUnit = audioEngine.inputNode.audioUnit else {
+            log.error("无法获取输入 AudioUnit")
+            return
+        }
+
+        var deviceID = targetDeviceID
+        let status = AudioUnitSetProperty(
+            audioUnit,
+            kAudioOutputUnitProperty_CurrentDevice,
+            kAudioUnitScope_Global,
+            0,
+            &deviceID,
+            UInt32(MemoryLayout<AudioDeviceID>.size)
+        )
+
+        if status != noErr {
+            log.error("AudioUnitSetProperty 设置输入设备失败: \(status)")
+        } else {
+            log.info("已切换输入设备到: \(deviceID)".yellow)
+        }
     }
 
     /// 处理 SinkNode 接收到的音频缓冲区
@@ -262,6 +295,14 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         recordMode = mode
 
         do {
+            var enableIO: UInt32 = 0 // 0 表示禁用，1 表示启用
+            let ioUnit = audioEngine.inputNode.audioUnit!
+            AudioUnitSetProperty(ioUnit,
+                                 kAudioOutputUnitProperty_EnableIO,
+                                 kAudioUnitScope_Output, // 输出作用域
+                                 0, // 元素0，即输出总线
+                                 &enableIO,
+                                 UInt32(MemoryLayout.size(ofValue: enableIO)))
             try audioEngine.start()
         } catch {
             log.error("🙅 AudioEngine error: \(error.localizedDescription)")
@@ -405,7 +446,7 @@ extension AudioSinkNodeRecorder {
                     }
                 case .audioDeviceChanged:
                     Task { @MainActor in
-                        self?.reconfigureAudioEngine()
+                        await self?.reconfigureAudioEngine()
                     }
                 default:
                     break
