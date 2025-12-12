@@ -34,6 +34,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     private var opusFramesPerPacket = 20 // 默认聚合 200ms
 
     private var audioQueue: Deque<Data> = .init()
+    private var recordedAudioData = Data()
 
     // 响应式流处理
     private var cancellables = Set<AnyCancellable>()
@@ -104,7 +105,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         // SinkNode Handle
         sinkNode = AVAudioSinkNode { [weak self] timestamp, frameCount, audioBufferList in
             guard let self, recordState == .recording else { return OSStatus(noErr) }
-
+            log.debug("SinkNode Buffer")
             processSinkNodeBuffer(audioBufferList, frameCount: frameCount, timestamp: timestamp)
             return OSStatus(noErr)
         }
@@ -114,9 +115,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         audioEngine.connect(inputNode, to: sinkNode, format: nil)
 
         // 创建虚拟静音输出节点，隔离输出设备变化
-        let outputFormat = audioEngine.outputNode.outputFormat(forBus: 0)
         silentSourceNode = AVAudioSourceNode { _, _, _, audioBufferList in
-            // 输出静音数据，保持 Engine 时钟源稳定
             let bufferList = UnsafeMutableAudioBufferListPointer(audioBufferList)
             for buffer in bufferList {
                 memset(buffer.mData, 0, Int(buffer.mDataByteSize))
@@ -125,57 +124,41 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         }
 
         audioEngine.attach(silentSourceNode)
-        audioEngine.connect(silentSourceNode, to: audioEngine.mainMixerNode, format: outputFormat)
+        audioEngine.connect(silentSourceNode, to: audioEngine.mainMixerNode, format: nil)
         audioEngine.prepare()
 
         log.info("✅ SinkNode 音频引擎设置完成")
     }
 
+    private var isReconfiguring = false
+
     @MainActor
     private func reconfigureAudioEngine() async {
-        log.info("🔄 Reconfigure Audio Engine \(audioEngine.isRunning)".yellow)
+        guard !isReconfiguring else { return }
+        isReconfiguring = true
+        defer { isReconfiguring = false }
+
+        log.info("🔄 Reconfigure Audio Engine".yellow)
         audioEngine.stop()
         audioEngine.reset()
         sinkNode = nil
         silentSourceNode = nil
         converter = nil
+        try? await sleep(1000)
 
-        try? await sleep(1500)
-        audioEngine = AVAudioEngine()
-        // applyInputDeviceSelection()
-        setupAudioEngine()
-        log.info("🔄 Audio engine reconfigured")
-    }
+        Task { [weak self] in
+            guard let self else { return }
+            let timeoutTask = Task {
+                try? await Task.sleep(nanoseconds: 2_000_000_000)
+                if !Task.isCancelled {
+                    log.error("Reconfigure timeout, exiting...")
+                    exit(1)
+                }
+            }
 
-    private func applyInputDeviceSelection() {
-        let targetDeviceID =
-            AudioDeviceManager.shared.selectedDeviceID
-                ?? AudioDeviceManager.shared.defaultInputDeviceID
-
-        guard targetDeviceID != 0 else {
-            log.warning("未找到可用输入设备 ID")
-            return
-        }
-
-        guard let audioUnit = audioEngine.inputNode.audioUnit else {
-            log.error("无法获取输入 AudioUnit")
-            return
-        }
-
-        var deviceID = targetDeviceID
-        let status = AudioUnitSetProperty(
-            audioUnit,
-            kAudioOutputUnitProperty_CurrentDevice,
-            kAudioUnitScope_Global,
-            0,
-            &deviceID,
-            UInt32(MemoryLayout<AudioDeviceID>.size)
-        )
-
-        if status != noErr {
-            log.error("AudioUnitSetProperty 设置输入设备失败: \(status)")
-        } else {
-            log.info("已切换输入设备到: \(deviceID)".yellow)
+            audioEngine = AVAudioEngine()
+            setupAudioEngine()
+            timeoutTask.cancel()
         }
     }
 
@@ -250,6 +233,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
                 audioQueue.append(packet)
             }
         }
+
         handleQueuedAudio()
     }
 
@@ -277,6 +261,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
     private func sendAudioData(_ audioData: Data) {
         totalPacketsSent += 1
         totalBytesSent += audioData.count
+        recordedAudioData.append(audioData)
 
         EventBus.shared.publish(.audioDataReceived(data: audioData))
     }
@@ -285,6 +270,11 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
 
     @MainActor
     func startRecording(mode: RecordMode = .normal) {
+        guard !isReconfiguring else {
+            log.warning("Reconfiguring, skip start recording")
+            return
+        }
+
         guard recordState == .idle else {
             log.warning("Cant Start recording, now state: \(recordState)")
             return
@@ -295,17 +285,18 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
         recordMode = mode
 
         do {
-            var enableIO: UInt32 = 0 // 0 表示禁用，1 表示启用
-            let ioUnit = audioEngine.inputNode.audioUnit!
-            AudioUnitSetProperty(ioUnit,
-                                 kAudioOutputUnitProperty_EnableIO,
-                                 kAudioUnitScope_Output, // 输出作用域
-                                 0, // 元素0，即输出总线
-                                 &enableIO,
-                                 UInt32(MemoryLayout.size(ofValue: enableIO)))
             try audioEngine.start()
         } catch {
             log.error("🙅 AudioEngine error: \(error.localizedDescription)")
+        }
+
+        Task {
+            try await sleep(500)
+            if totalRawBytesSent == 0 {
+                log.error("No audio data received, exit".yellow)
+                try await sleep(500)
+                exit(0)
+            }
         }
 
         startRecordingTimers()
@@ -351,6 +342,7 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
 
     @MainActor
     func resetState() {
+        saveRecordingToLocalFile()
         // 重置状态
         recordState = .idle
         audioEngine.stop()
@@ -372,6 +364,26 @@ class AudioSinkNodeRecorder: @unchecked Sendable {
 
         // 停止录音时长限制定时器
         stopRecordingTimers()
+    }
+
+    private func saveRecordingToLocalFile() {
+        guard !recordedAudioData.isEmpty else { return }
+        guard let dir = UserConfigService.shared.audiosDirectory else {
+            recordedAudioData.removeAll()
+            return
+        }
+
+        let filename = "recording-\(Int(Date().timeIntervalSince1970)).ogg"
+        let fileURL = dir.appendingPathComponent(filename)
+
+        do {
+            try recordedAudioData.write(to: fileURL)
+            log.info("💾 Saved recording to \(fileURL.lastPathComponent)")
+        } catch {
+            log.error("Failed to save recording: \(error)")
+        }
+
+        recordedAudioData.removeAll()
     }
 
     /// 计算音频缓冲区的音量 限制在 0-1 范围内

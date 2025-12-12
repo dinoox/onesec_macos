@@ -13,7 +13,7 @@ import os.lock
 /// 全局 Input 控制器
 /// 负责监听配置的按键组合的按下和松开事件，控制录音的开始和停止
 class InputController {
-    var audioRecorder: AudioSinkNodeRecorder = .init()
+    var audioRecorder: AudioUnitRecorder = .init()
     var keyEventProcessor: KeyEventProcessor = .init()
 
     /// 事件监听器
