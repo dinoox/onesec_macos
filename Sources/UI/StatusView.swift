@@ -51,6 +51,9 @@ extension StatusView {
         case let .recordingStarted(mode):
             recording.mode = mode
             recording.state = .recording
+            if Config.shared.USER_CONFIG.setting.hideFloatingPanel {
+                StatusPanelManager.shared.showPanel()
+            }
         case let .recordingStopped(shouldSetResponseTimer, wssState):
             guard recording.state == .recording else { return }
             recording.state = shouldSetResponseTimer ? .processing : .idle
@@ -63,6 +66,9 @@ extension StatusView {
                     autoHide: notificationType.shouldAutoHide,
                 )
             }
+            // if Config.shared.USER_CONFIG.setting.hideFloatingPanel && (!shouldSetResponseTimer || wssState != .connected) {
+            //     StatusPanelManager.shared.hidePanel()
+            // }
         case let .modeUpgraded(from, to):
             log.info("Receive modeUpgraded: \(from) \(to)")
             if to == .command {
@@ -118,6 +124,9 @@ extension StatusView {
             ])
         case let .serverResultReceived(text, _, processMode, polishedText):
             recording.state = .idle
+            if Config.shared.USER_CONFIG.setting.hideFloatingPanel {
+                StatusPanelManager.shared.hidePanel()
+            }
             if text.isEmpty {
                 return
             }
@@ -174,14 +183,14 @@ extension StatusView {
 
         if canPaste {
             if processMode == .translate {
-                guard Config.shared.USER_CONFIG.translation.showComparison else { return }
+                guard Config.shared.USER_CONFIG.setting.showComparison else { return }
                 ContentCard<EmptyView>.show(title: "识别内容", content: polishedText, onTap: nil, actionButtons: nil, cardWidth: cardWidth, spacingX: 8, spacingY: 14, panelType: .translate(.above))
             } else if processMode == .terminal, text.newlineCount >= 1 {
                 LinuxCommandCard.show(commands: [LinuxCommand(distro: "", command: text, displayName: "")])
             }
         } else {
             if processMode == .translate {
-                guard Config.shared.USER_CONFIG.translation.showComparison else { return }
+                guard Config.shared.USER_CONFIG.setting.showComparison else { return }
                 MultiContentCard.show(title: "执行结果", items: [
                     ContentItem(title: "原文", content: polishedText),
                     ContentItem(title: "译文", content: text),

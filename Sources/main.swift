@@ -14,8 +14,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         connectionCenter = ConnectionCenter.shared
         connectionCenter.initialize()
+        StatusPanelManager.shared.orderFront()
 
-        StatusPanelManager.shared.showPanel()
         Task { @MainActor in
             AXSelectionObserver.shared.startObserving()
             AXTranslationAccessor.setupMouseUpListener()

@@ -158,12 +158,25 @@ class StatusPanelManager {
         panel.alphaValue = 0
     }
 
-    func showPanel() {
+    func orderFront() {
         panel.orderFrontRegardless()
+
+        if Config.shared.USER_CONFIG.setting.hideFloatingPanel {
+            return
+        }
 
         // 淡入
         NSAnimationContext.runAnimationGroup { context in
-            context.duration = 0.4
+            context.duration = 0.3
+            context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+            panel.animator().alphaValue = 1.0
+        }
+    }
+
+    func showPanel() {
+        // 淡入
+        NSAnimationContext.runAnimationGroup { context in
+            context.duration = 0.3
             context.timingFunction = CAMediaTimingFunction(name: .easeOut)
             panel.animator().alphaValue = 1.0
         }
@@ -178,7 +191,7 @@ class StatusPanelManager {
                 panel.animator().alphaValue = 0
             },
             completionHandler: {
-                self.panel.orderOut(nil)
+                // self.panel.orderOut(nil)
             },
         )
     }

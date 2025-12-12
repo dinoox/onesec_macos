@@ -12,6 +12,14 @@ import Combine
 import Foundation
 import Opus
 
+enum RecordState {
+    case idle
+    case recording
+    case recordingTimeout
+    case processing
+    case stopping
+}
+
 /// 基于 Audio Unit 的录音器
 /// 避免 AVAudioEngine 的聚合设备问题
 class AudioUnitRecorder: @unchecked Sendable {
@@ -47,7 +55,7 @@ class AudioUnitRecorder: @unchecked Sendable {
         interleaved: true
     )!
 
-    // MARK: - 录音配置
+    // 录音配置
 
     private let opusFrameSamples = 160 // 10ms @ 16kHz
     private var opusFramesPerPacket = 20 // 默认聚合 200ms
@@ -59,24 +67,22 @@ class AudioUnitRecorder: @unchecked Sendable {
     private var isRecordingStarted = false
     private var recordMode: RecordMode = .normal
 
-    // MARK: - 录音统计数据
+    // 录音统计数据
 
     private var totalPacketsSent = 0
     private var totalBytesSent = 0
     private var totalRawBytesSent = 0
     private var recordingStartTime: Date?
 
-    // MARK: - 录音时长限制
+    // 录音时长限制
 
     private let maxRecordingDuration: TimeInterval = 180
     private let warningBeforeTimeout: TimeInterval = 15
     private var recordingLimitTimer: Timer?
 
-    // MARK: - 线程安全
+    // 线程安全
 
     private let lock = NSLock()
-
-    // MARK: - 初始化
 
     init() {
         setupOpusEncoderAndPacketizer()
@@ -86,8 +92,6 @@ class AudioUnitRecorder: @unchecked Sendable {
     deinit {
         cleanup()
     }
-
-    // MARK: - Setup Methods
 
     private func setupOpusEncoderAndPacketizer() {
         let avFormat = AVAudioFormat(
@@ -120,7 +124,6 @@ class AudioUnitRecorder: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
 
-        // 如果已经初始化过,验证其有效性
         if let unit = audioUnit {
             // 尝试获取属性验证 Audio Unit 是否真正可用
             var propertySize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
@@ -197,8 +200,7 @@ class AudioUnitRecorder: @unchecked Sendable {
 
         // 4. 设置输入设备（若用户设备已失效则回退到系统默认）
         let deviceManager = AudioDeviceManager.shared
-        let preferredDeviceID = deviceManager.selectedDeviceID
-        var deviceID = deviceManager.currentInputDeviceID()
+        var deviceID = deviceManager.selectedDeviceID ?? 0
         status = AudioUnitSetProperty(
             unit,
             kAudioOutputUnitProperty_CurrentDevice,
@@ -208,21 +210,19 @@ class AudioUnitRecorder: @unchecked Sendable {
             UInt32(MemoryLayout<AudioDeviceID>.size)
         )
 
-        if status != noErr, deviceID != deviceManager.defaultInputDeviceID {
-            log.warning("指定输入设备不可用(\(deviceID)),回退到系统默认: \(deviceManager.defaultInputDeviceID)")
-            deviceID = deviceManager.defaultInputDeviceID
-            status = AudioUnitSetProperty(
-                unit,
-                kAudioOutputUnitProperty_CurrentDevice,
-                kAudioUnitScope_Global,
-                0,
-                &deviceID,
-                UInt32(MemoryLayout<AudioDeviceID>.size)
-            )
-
-            // 清空失效的用户选择,避免后续继续失败
-            if status == noErr, preferredDeviceID != nil {
-                deviceManager.selectedDeviceID = nil
+        if status != noErr {
+            let systemDefaultID = deviceManager.selectedDeviceID ?? 0
+            if systemDefaultID > 0, systemDefaultID != deviceID {
+                log.warning("指定输入设备不可用(\(deviceID)), 回退到系统默认: \(systemDefaultID)")
+                deviceID = systemDefaultID
+                status = AudioUnitSetProperty(
+                    unit,
+                    kAudioOutputUnitProperty_CurrentDevice,
+                    kAudioUnitScope_Global,
+                    0,
+                    &deviceID,
+                    UInt32(MemoryLayout<AudioDeviceID>.size)
+                )
             }
         }
 
@@ -464,13 +464,12 @@ class AudioUnitRecorder: @unchecked Sendable {
             // 启动 Audio Unit (不重新初始化)
             var status = AudioOutputUnitStart(unit)
 
-            // 如果错误是 -10867 (kAudioUnitErr_CannotDoInCurrentContext)
+            // 如果错误是 -10867
             // 可能是 Audio Unit 已在运行,先停止再启动
             if status == -10867 {
                 log.warning("Audio Unit 可能已在运行,尝试先停止再启动")
                 AudioOutputUnitStop(unit)
                 status = AudioOutputUnitStart(unit)
-            
             }
 
             guard status == noErr else {
@@ -478,10 +477,10 @@ class AudioUnitRecorder: @unchecked Sendable {
             }
 
             startRecordingTimers()
-            log.info("🎙️ Start Recording (Audio Unit)")
+            log.info("🎙️ 开始录音")
 
         } catch {
-            log.error("🙅 Failed to start recording: \(error.localizedDescription)")
+            log.error("🙅 Failed to start recording: \(error.localizedDescription)".red)
             recordState = .idle
         }
     }
@@ -500,7 +499,6 @@ class AudioUnitRecorder: @unchecked Sendable {
         // 只停止 Audio Unit,不销毁
         if let unit = audioUnit {
             AudioOutputUnitStop(unit)
-            log.debug("Audio Unit 已停止 (实例保留)")
         }
 
         // 刷新编码器缓冲区
@@ -525,17 +523,12 @@ class AudioUnitRecorder: @unchecked Sendable {
                 wssState: ConnectionCenter.shared.wssState
             )
         )
-        log.info("✅ Recording Stopped")
+        log.info("✅ 录音停止")
     }
 
     @MainActor
     func resetState() {
-        saveRecordingToLocalFile()
         recordState = .idle
-
-        // 不再清理 Audio Unit,保留实例供下次复用
-        // cleanup() 已移除
-
         resetRecordingState()
     }
 

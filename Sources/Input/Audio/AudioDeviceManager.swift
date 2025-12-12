@@ -12,7 +12,7 @@ struct AudioDevice: Identifiable, Equatable {
     let uid: String
 
     var isDefault: Bool {
-        id == AudioDeviceManager.shared.defaultInputDeviceID
+        id == AudioDeviceManager.shared.selectedDeviceID
     }
 }
 
@@ -20,40 +20,17 @@ class AudioDeviceManager {
     static let shared = AudioDeviceManager()
 
     private(set) var inputDevices: [AudioDevice] = []
-    private(set) var defaultInputDeviceID: AudioDeviceID = 0
 
     var selectedDeviceID: AudioDeviceID? {
         get {
-            let saved = UserDefaults.standard.integer(forKey: "selectedAudioDeviceID")
-            return saved > 0 ? AudioDeviceID(saved) : nil
+            let systemDefault = getDefaultInputDeviceID()
+            return systemDefault > 0 ? systemDefault : nil
         }
         set {
-            if let id = newValue {
-                UserDefaults.standard.set(Int(id), forKey: "selectedAudioDeviceID")
-            } else {
-                UserDefaults.standard.removeObject(forKey: "selectedAudioDeviceID")
-            }
-            applySelectedDevice()
+            guard let id = newValue else { return }
+            setSystemInputDevice(id)
+            refreshDevices()
         }
-    }
-
-    private func deviceExists(_ deviceID: AudioDeviceID) -> Bool {
-        inputDevices.contains { $0.id == deviceID }
-    }
-
-    /// 返回可用的输入设备 ID,若用户选择的设备已失效则回落到系统默认
-    func currentInputDeviceID() -> AudioDeviceID {
-        refreshDevices()
-        if let selected = selectedDeviceID, deviceExists(selected) {
-            return selected
-        }
-
-        if selectedDeviceID != nil {
-            log.warning("用户选择的输入设备已不可用,切回系统默认")
-            selectedDeviceID = nil
-        }
-
-        return defaultInputDeviceID
     }
 
     private init() {
@@ -71,9 +48,7 @@ class AudioDeviceManager {
             AudioObjectID(kAudioObjectSystemObject),
             &address,
             { _, _, _, _ in
-                Task { @MainActor in
-                    AudioDeviceManager.shared.handleDeviceChange()
-                }
+                AudioDeviceManager.shared.handleDeviceChange()
                 return noErr
             },
             nil
@@ -81,24 +56,18 @@ class AudioDeviceManager {
     }
 
     private func handleDeviceChange() {
-        let oldDefault = defaultInputDeviceID
         refreshDevices()
-        if let selected = selectedDeviceID, !deviceExists(selected) {
-            log.warning("当前选择的输入设备已消失,重置为系统默认")
-            selectedDeviceID = nil
-        }
-        if oldDefault != defaultInputDeviceID {
-            log.info("🎧 Input Device Changed: \(getDeviceName(defaultInputDeviceID) ?? "Unknown")".yellow)
-            EventBus.shared.publish(.audioDeviceChanged)
-        }
+        log.info("🎧 Input Device Changed: \(getDeviceName(getDefaultInputDeviceID()) ?? "Unknown")".yellow)
+        EventBus.shared.publish(.audioDeviceChanged)
     }
 
     func refreshDevices() {
-        defaultInputDeviceID = getDefaultInputDeviceID()
         inputDevices = getInputDevices()
     }
+}
 
-    private func getDefaultInputDeviceID() -> AudioDeviceID {
+private extension AudioDeviceManager {
+    func getDefaultInputDeviceID() -> AudioDeviceID {
         var deviceID: AudioDeviceID = 0
         var size = UInt32(MemoryLayout<AudioDeviceID>.size)
         var address = AudioObjectPropertyAddress(
@@ -110,7 +79,7 @@ class AudioDeviceManager {
         return deviceID
     }
 
-    private func getInputDevices() -> [AudioDevice] {
+    func getInputDevices() -> [AudioDevice] {
         var devices: [AudioDevice] = []
 
         var size: UInt32 = 0
@@ -134,6 +103,7 @@ class AudioDeviceManager {
         for deviceID in deviceIDs {
             if hasInputChannels(deviceID),
                !isAggregateDevice(deviceID),
+               !isVirtualDevice(deviceID),
                let name = getDeviceName(deviceID),
                let uid = getDeviceUID(deviceID)
             {
@@ -144,9 +114,44 @@ class AudioDeviceManager {
         return devices
     }
 
-    // 这是 macOS 系统创建的聚合设备（Aggregate Device）
-    // 通常由系统或某些应用自动生成，用于组合多个音频设备。不是真正的物理设备
-    private func isAggregateDevice(_ deviceID: AudioDeviceID) -> Bool {
+    private func setSystemInputDevice(_ deviceID: AudioDeviceID) {
+        var mutableDeviceID = deviceID
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioHardwarePropertyDefaultInputDevice,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+        let size = UInt32(MemoryLayout<AudioDeviceID>.size)
+        let result = AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, size, &mutableDeviceID)
+        if result != noErr {
+            log.error("Failed to change audio input device: \(result)")
+        }
+    }
+}
+
+private extension AudioDeviceManager {
+    // 过滤虚拟音频设备，通常用于会议音频处理
+    // 例如: LarkAudioDevice, ZoomAudioDevice
+    // 这些设备通常用于会议音频处理，不是真正的物理设备
+    func isVirtualDevice(_ deviceID: AudioDeviceID) -> Bool {
+        var transportType: UInt32 = 0
+        var size = UInt32(MemoryLayout<UInt32>.size)
+        var address = AudioObjectPropertyAddress(
+            mSelector: kAudioDevicePropertyTransportType,
+            mScope: kAudioObjectPropertyScopeGlobal,
+            mElement: kAudioObjectPropertyElementMain
+        )
+
+        if AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &transportType) == noErr {
+            return transportType == kAudioDeviceTransportTypeVirtual
+        }
+
+        return false
+    }
+
+    // 这是 macOS 系统创建的聚合设备 (Aggregate Device)
+    // 通常由系统或某些应用自动生成, 用于组合多个音频设备, 非真正物理设备
+    func isAggregateDevice(_ deviceID: AudioDeviceID) -> Bool {
         var transportType: UInt32 = 0
         var size = UInt32(MemoryLayout<UInt32>.size)
         var address = AudioObjectPropertyAddress(
@@ -160,7 +165,7 @@ class AudioDeviceManager {
         return transportType == kAudioDeviceTransportTypeAggregate
     }
 
-    private func hasInputChannels(_ deviceID: AudioDeviceID) -> Bool {
+    func hasInputChannels(_ deviceID: AudioDeviceID) -> Bool {
         var size: UInt32 = 0
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyStreamConfiguration,
@@ -183,7 +188,7 @@ class AudioDeviceManager {
         return buffers.reduce(0) { $0 + Int($1.mNumberChannels) } > 0
     }
 
-    private func getDeviceName(_ deviceID: AudioDeviceID) -> String? {
+    func getDeviceName(_ deviceID: AudioDeviceID) -> String? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyDeviceNameCFString,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -200,7 +205,7 @@ class AudioDeviceManager {
         return cfName as String
     }
 
-    private func getDeviceUID(_ deviceID: AudioDeviceID) -> String? {
+    func getDeviceUID(_ deviceID: AudioDeviceID) -> String? {
         var address = AudioObjectPropertyAddress(
             mSelector: kAudioDevicePropertyDeviceUID,
             mScope: kAudioObjectPropertyScopeGlobal,
@@ -215,27 +220,5 @@ class AudioDeviceManager {
             return nil
         }
         return cfUID as String
-    }
-
-    func applySelectedDevice() {
-        guard let deviceID = selectedDeviceID else { return }
-        setSystemInputDevice(deviceID)
-    }
-
-    private func setSystemInputDevice(_ deviceID: AudioDeviceID) {
-        var mutableDeviceID = deviceID
-        var address = AudioObjectPropertyAddress(
-            mSelector: kAudioHardwarePropertyDefaultInputDevice,
-            mScope: kAudioObjectPropertyScopeGlobal,
-            mElement: kAudioObjectPropertyElementMain
-        )
-        let size = UInt32(MemoryLayout<AudioDeviceID>.size)
-        let result = AudioObjectSetPropertyData(AudioObjectID(kAudioObjectSystemObject), &address, 0, nil, size, &mutableDeviceID)
-        if result == noErr {
-            // log.info("🎧 Input Device Changed: \(getDeviceName(defaultInputDeviceID) ?? "Unknown")".yellow)
-            // ConnectionCenter.shared.resetInputService()
-        } else {
-            log.error("Failed to change audio input device: \(result)")
-        }
     }
 }

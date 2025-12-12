@@ -101,7 +101,7 @@ struct UserConfig: Codable {
     var theme: String
     let environment: Environment
     var lastSyncFocusJudgmentSheetTime: Double
-    let translation: Translation
+    let setting: Setting
     var authToken: String
     let user: User
     var hotkeyConfigs: [HotkeyConfig]
@@ -114,7 +114,7 @@ struct UserConfig: Codable {
         theme = "light"
         environment = Environment()
         lastSyncFocusJudgmentSheetTime = 0
-        translation = Translation()
+        setting = Setting()
         authToken = ""
         user = User()
         hotkeyConfigs = []
@@ -125,7 +125,7 @@ struct UserConfig: Codable {
         theme = try container.decodeIfPresent(String.self, forKey: .theme) ?? "light"
         environment = try container.decodeIfPresent(Environment.self, forKey: .environment) ?? Environment()
         lastSyncFocusJudgmentSheetTime = try container.decodeIfPresent(Double.self, forKey: .lastSyncFocusJudgmentSheetTime) ?? 0
-        translation = try container.decodeIfPresent(Translation.self, forKey: .translation) ?? Translation()
+        setting = try container.decodeIfPresent(Setting.self, forKey: .setting) ?? Setting()
         authToken = try container.decodeIfPresent(String.self, forKey: .authToken) ?? ""
         user = try container.decodeIfPresent(User.self, forKey: .user) ?? User()
         hotkeyConfigs = try container.decodeIfPresent([HotkeyConfig].self, forKey: .hotkeyConfigs) ?? []
@@ -135,7 +135,7 @@ struct UserConfig: Codable {
         case theme
         case environment
         case lastSyncFocusJudgmentSheetTime
-        case translation
+        case setting
         case authToken = "auth_token"
         case user
         case hotkeyConfigs = "hotkey_configs"
@@ -182,20 +182,24 @@ struct UserConfig: Codable {
         }
     }
 
-    struct Translation: Codable {
+    struct Setting: Codable {
         let showComparison: Bool
+        let hideFloatingPanel: Bool
 
         init() {
             showComparison = false
+            hideFloatingPanel = false
         }
 
         init(from decoder: Decoder) throws {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             showComparison = try container.decodeIfPresent(Bool.self, forKey: .showComparison) ?? false
+            hideFloatingPanel = try container.decodeIfPresent(Bool.self, forKey: .hideFloatingPanel) ?? false
         }
 
         enum CodingKeys: String, CodingKey {
             case showComparison = "show_comparison"
+            case hideFloatingPanel = "hide_floating_panel"
         }
     }
 
