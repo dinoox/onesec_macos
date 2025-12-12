@@ -20,25 +20,34 @@ class AudioUnitRecorder: @unchecked Sendable {
     // Audio Unit 组件
 
     private var audioUnit: AudioUnit?
-    private var converter: AudioConverterRef?
+    private var avAudioConverter: AVAudioConverter?
     private var opusEncoder: OpusEncoder!
     private var oggPacketizer: OpusOggStreamPacketizer!
 
     // 音频格式
 
     private let targetFormat = AudioStreamBasicDescription(
-        mSampleRate: 16000.0, // 采样率 16kHz
-        mFormatID: kAudioFormatLinearPCM, // 音频格式ID
-        mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked, // 格式标志
-        mBytesPerPacket: 2, // 每数据包的字节数
-        mFramesPerPacket: 1, // 每数据包的帧数
-        mBytesPerFrame: 2, // 每帧的字节数
-        mChannelsPerFrame: 1, // 每帧的字节数
-        mBitsPerChannel: 16, // 每个声道的位数
-        mReserved: 0 // 保留字段
+        mSampleRate: 16000.0,
+        mFormatID: kAudioFormatLinearPCM,
+        mFormatFlags: kAudioFormatFlagIsSignedInteger | kAudioFormatFlagIsPacked,
+        mBytesPerPacket: 2,
+        mFramesPerPacket: 1,
+        mBytesPerFrame: 2,
+        mChannelsPerFrame: 1,
+        mBitsPerChannel: 16,
+        mReserved: 0
     )
 
     private var inputFormat = AudioStreamBasicDescription()
+    private var inputAVFormat: AVAudioFormat?
+    private let targetAVFormat: AVAudioFormat = {
+        AVAudioFormat(
+            commonFormat: .pcmFormatInt16,
+            sampleRate: 16000.0,
+            channels: 1,
+            interleaved: true
+        )!
+    }()
 
     // MARK: - 录音配置
 
@@ -226,8 +235,12 @@ class AudioUnitRecorder: @unchecked Sendable {
             throw NSError(domain: "AudioUnit", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Failed to set callback: \(status)"])
         }
 
-        // 8. 创建格式转换器
-        try setupAudioConverter()
+        // 8. 创建格式转换器（保持与 AudioEngine 一致的高质量重采样）
+        inputAVFormat = AVAudioFormat(streamDescription: &inputFormat)
+        if let inputAVFormat {
+            avAudioConverter = AVAudioConverter(from: inputAVFormat, to: targetAVFormat)
+            avAudioConverter?.sampleRateConverterAlgorithm = AVSampleRateConverterAlgorithm_Mastering
+        }
 
         // 9. 初始化 Audio Unit
         status = AudioUnitInitialize(unit)
@@ -236,31 +249,6 @@ class AudioUnitRecorder: @unchecked Sendable {
         }
 
         log.info("✅ Audio Unit 初始化完成")
-    }
-
-    private func setupAudioConverter() throws {
-        guard inputFormat.mSampleRate > 0 else {
-            throw NSError(domain: "AudioUnit", code: -1, userInfo: [NSLocalizedDescriptionKey: "Invalid input format"])
-        }
-
-        var inputFormatCopy = inputFormat
-        var targetFormatCopy = targetFormat
-
-        let status = AudioConverterNew(&inputFormatCopy, &targetFormatCopy, &converter)
-        guard status == noErr else {
-            throw NSError(domain: "AudioUnit", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Failed to create audio converter: \(status)"])
-        }
-
-        // 设置转换质量
-        var quality = kAudioConverterQuality_High
-        AudioConverterSetProperty(
-            converter!,
-            kAudioConverterSampleRateConverterQuality,
-            UInt32(MemoryLayout<UInt32>.size),
-            &quality
-        )
-
-        log.debug("✅ 音频转换器已创建: \(inputFormat.mSampleRate)Hz -> \(targetFormat.mSampleRate)Hz")
     }
 
     // MARK: - Audio Callback
@@ -279,21 +267,25 @@ class AudioUnitRecorder: @unchecked Sendable {
             return noErr
         }
 
-        // 准备输入缓冲区列表
-        var bufferList = AudioBufferList()
-        bufferList.mNumberBuffers = 1
-        bufferList.mBuffers.mNumberChannels = UInt32(recorder.inputFormat.mChannelsPerFrame)
-        bufferList.mBuffers.mDataByteSize = inNumberFrames * UInt32(recorder.inputFormat.mBytesPerFrame)
-        bufferList.mBuffers.mData = nil // AudioUnitRender 会分配
+        guard let inputFormat = recorder.inputAVFormat,
+              let buffer = AVAudioPCMBuffer(
+                  pcmFormat: inputFormat,
+                  frameCapacity: AVAudioFrameCount(inNumberFrames)
+              )
+        else {
+            return noErr
+        }
 
-        // 获取音频数据
+        buffer.frameLength = AVAudioFrameCount(inNumberFrames)
+
+        // 获取音频数据（直接渲染进 AVAudioPCMBuffer）
         let status = AudioUnitRender(
             recorder.audioUnit!,
             ioActionFlags,
             inTimeStamp,
             inBusNumber,
             inNumberFrames,
-            &bufferList
+            buffer.mutableAudioBufferList
         )
 
         guard status == noErr else {
@@ -302,97 +294,44 @@ class AudioUnitRecorder: @unchecked Sendable {
         }
 
         // 处理音频数据
-        recorder.processAudioBuffer(&bufferList, frameCount: inNumberFrames)
+        recorder.processAudioBuffer(buffer)
 
         return noErr
     }
 
-    private func processAudioBuffer(_ bufferList: UnsafeMutablePointer<AudioBufferList>, frameCount: UInt32) {
-        guard let buffer = bufferList.pointee.mBuffers.mData else { return }
+    private func processAudioBuffer(_ inputBuffer: AVAudioPCMBuffer) {
+        guard let converter = avAudioConverter else { return }
 
-        // 转换格式
-        let convertedData = convertAudioFormat(buffer, frameCount: frameCount)
-        guard !convertedData.isEmpty else { return }
+        // 以与 AudioEngine 相同的路径重采样
+        let estimatedOutputFrames = AVAudioFrameCount(
+            Double(inputBuffer.frameLength)
+                * targetAVFormat.sampleRate
+                / inputBuffer.format.sampleRate
+        ) + 1
 
-        // 计算音量
-        let volume = calculateVolume(from: convertedData)
+        guard let outputBuffer = AVAudioPCMBuffer(
+            pcmFormat: targetAVFormat,
+            frameCapacity: max(estimatedOutputFrames, 1)
+        ) else { return }
+
+        var error: NSError?
+        let status = converter.convert(to: outputBuffer, error: &error) { _, outStatus in
+            outStatus.pointee = .haveData
+            return inputBuffer
+        }
+
+        guard status != .error else {
+            log.error("Audio convert failed: \(error?.localizedDescription ?? "unknown")")
+            return
+        }
+
+        guard let pcmData = pcmBufferToData(outputBuffer), !pcmData.isEmpty else { return }
+
+        let volume = calculateVolume(from: pcmData)
         EventBus.shared.publish(.volumeChanged(volume: volume))
 
-        // 编码并发送
-        encodeAndQueue(convertedData)
-    }
-
-    private func convertAudioFormat(_ inputData: UnsafeMutableRawPointer, frameCount: UInt32) -> Data {
-        guard let conv = converter else { return Data() }
-
-        // 计算输出帧数
-        let conversionRatio = targetFormat.mSampleRate / inputFormat.mSampleRate
-        let outputFrameCount = UInt32(Double(frameCount) * conversionRatio)
-        let outputDataSize = outputFrameCount * UInt32(targetFormat.mBytesPerFrame)
-
-        var outputData = Data(count: Int(outputDataSize))
-
-        var outputBufferList = AudioBufferList()
-        outputBufferList.mNumberBuffers = 1
-
-        outputData.withUnsafeMutableBytes { rawBufferPointer in
-            outputBufferList.mBuffers.mNumberChannels = UInt32(targetFormat.mChannelsPerFrame)
-            outputBufferList.mBuffers.mDataByteSize = outputDataSize
-            outputBufferList.mBuffers.mData = rawBufferPointer.baseAddress
-
-            var ioOutputDataPacketSize = outputFrameCount
-
-            // 输入数据提供回调
-            let inputDataProc: AudioConverterComplexInputDataProc = {
-                _,
-                    ioNumberDataPackets,
-                    ioData,
-                    _,
-                    inUserData
-                    -> OSStatus in
-                guard let userData = inUserData else { return -1 }
-
-                let context = userData.assumingMemoryBound(to: AudioConverterContext.self).pointee
-
-                ioData.pointee.mNumberBuffers = 1
-                ioData.pointee.mBuffers.mNumberChannels = UInt32(context.inputFormat.mChannelsPerFrame)
-                ioData.pointee.mBuffers.mDataByteSize = context.frameCount * UInt32(context.inputFormat.mBytesPerFrame)
-                ioData.pointee.mBuffers.mData = context.inputData
-
-                ioNumberDataPackets.pointee = context.frameCount
-
-                return noErr
-            }
-
-            var context = AudioConverterContext(
-                inputData: inputData,
-                frameCount: frameCount,
-                inputFormat: inputFormat
-            )
-
-            let status = AudioConverterFillComplexBuffer(
-                conv,
-                inputDataProc,
-                &context,
-                &ioOutputDataPacketSize,
-                &outputBufferList,
-                nil
-            )
-
-            if status != noErr {
-                log.error("AudioConverterFillComplexBuffer failed: \(status)")
-            }
-        }
-
-        // 调整实际大小
-        let actualSize = Int(outputBufferList.mBuffers.mDataByteSize)
-        if actualSize < outputData.count {
-            outputData.removeLast(outputData.count - actualSize)
-        }
-
-        totalRawBytesSent += outputData.count
-
-        return outputData
+        totalRawBytesSent += pcmData.count
+        encodeAndQueue(pcmData)
     }
 
     private func encodeAndQueue(_ pcmData: Data) {
@@ -549,10 +488,7 @@ class AudioUnitRecorder: @unchecked Sendable {
             audioUnit = nil
         }
 
-        if let conv = converter {
-            AudioConverterDispose(conv)
-            converter = nil
-        }
+        avAudioConverter = nil
     }
 
     // MARK: - 设备切换
@@ -622,14 +558,16 @@ class AudioUnitRecorder: @unchecked Sendable {
 
         recordedAudioData.removeAll()
     }
-}
 
-// MARK: - 辅助结构
+    private func pcmBufferToData(_ buffer: AVAudioPCMBuffer) -> Data? {
+        guard buffer.frameLength > 0 else { return nil }
 
-private struct AudioConverterContext {
-    let inputData: UnsafeMutableRawPointer
-    let frameCount: UInt32
-    let inputFormat: AudioStreamBasicDescription
+        let bytesPerFrame = Int(buffer.format.streamDescription.pointee.mBytesPerFrame)
+        let realDataCount = Int(buffer.frameLength) * bytesPerFrame
+
+        guard let mData = buffer.audioBufferList.pointee.mBuffers.mData else { return nil }
+        return Data(bytes: mData, count: realDataCount)
+    }
 }
 
 // MARK: - 响应式音频流处理
