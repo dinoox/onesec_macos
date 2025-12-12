@@ -202,7 +202,7 @@ struct UserConfig: Codable {
     struct User: Codable {
         let phone: String
         let preferredLinuxDistro: String
-        let createdAt: String
+        let createdAt: Int
         let userId: Int
         let userName: String
         let invitationCodeUsed: String
@@ -211,7 +211,7 @@ struct UserConfig: Codable {
         init() {
             phone = ""
             preferredLinuxDistro = "debian"
-            createdAt = ""
+            createdAt = 0
             userId = 0
             userName = ""
             invitationCodeUsed = ""
@@ -222,7 +222,7 @@ struct UserConfig: Codable {
             let container = try decoder.container(keyedBy: CodingKeys.self)
             phone = try container.decodeIfPresent(String.self, forKey: .phone) ?? ""
             preferredLinuxDistro = try container.decodeIfPresent(String.self, forKey: .preferredLinuxDistro) ?? "debian"
-            createdAt = try container.decodeIfPresent(String.self, forKey: .createdAt) ?? ""
+            createdAt = try container.decodeIfPresent(Int.self, forKey: .createdAt) ?? 0
             userId = try container.decodeIfPresent(Int.self, forKey: .userId) ?? 0
             userName = try container.decodeIfPresent(String.self, forKey: .userName) ?? ""
             invitationCodeUsed = try container.decodeIfPresent(String.self, forKey: .invitationCodeUsed) ?? ""

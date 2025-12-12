@@ -37,6 +37,25 @@ class AudioDeviceManager {
         }
     }
 
+    private func deviceExists(_ deviceID: AudioDeviceID) -> Bool {
+        inputDevices.contains { $0.id == deviceID }
+    }
+
+    /// 返回可用的输入设备 ID,若用户选择的设备已失效则回落到系统默认
+    func currentInputDeviceID() -> AudioDeviceID {
+        refreshDevices()
+        if let selected = selectedDeviceID, deviceExists(selected) {
+            return selected
+        }
+
+        if selectedDeviceID != nil {
+            log.warning("用户选择的输入设备已不可用,切回系统默认")
+            selectedDeviceID = nil
+        }
+
+        return defaultInputDeviceID
+    }
+
     private init() {
         refreshDevices()
         setupDeviceChangeListener()
@@ -64,6 +83,10 @@ class AudioDeviceManager {
     private func handleDeviceChange() {
         let oldDefault = defaultInputDeviceID
         refreshDevices()
+        if let selected = selectedDeviceID, !deviceExists(selected) {
+            log.warning("当前选择的输入设备已消失,重置为系统默认")
+            selectedDeviceID = nil
+        }
         if oldDefault != defaultInputDeviceID {
             log.info("🎧 Input Device Changed: \(getDeviceName(defaultInputDeviceID) ?? "Unknown")".yellow)
             EventBus.shared.publish(.audioDeviceChanged)

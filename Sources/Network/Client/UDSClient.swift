@@ -196,7 +196,7 @@ extension UDSClient {
     private func handleConfigUpdatedMessage(json _: [String: Any], timestamp _: Int64) {
         let token = Config.shared.USER_CONFIG.authToken
         Config.shared.USER_CONFIG = UserConfigService.shared.loadUserConfig()
-
+        
         if token != Config.shared.USER_CONFIG.authToken {
             ConnectionCenter.shared.isAuthed = JWTValidator.isValid(Config.shared.USER_CONFIG.authToken)
             log.info("ConnectionCenter.shared.isAuthed \(ConnectionCenter.shared.isAuthed)")

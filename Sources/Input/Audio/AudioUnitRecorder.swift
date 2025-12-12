@@ -40,14 +40,12 @@ class AudioUnitRecorder: @unchecked Sendable {
 
     private var inputFormat = AudioStreamBasicDescription()
     private var inputAVFormat: AVAudioFormat?
-    private let targetAVFormat: AVAudioFormat = {
-        AVAudioFormat(
-            commonFormat: .pcmFormatInt16,
-            sampleRate: 16000.0,
-            channels: 1,
-            interleaved: true
-        )!
-    }()
+    private let targetAVFormat: AVAudioFormat = .init(
+        commonFormat: .pcmFormatInt16,
+        sampleRate: 16000.0,
+        channels: 1,
+        interleaved: true
+    )!
 
     // MARK: - 录音配置
 
@@ -122,6 +120,32 @@ class AudioUnitRecorder: @unchecked Sendable {
         lock.lock()
         defer { lock.unlock() }
 
+        // 如果已经初始化过,验证其有效性
+        if let unit = audioUnit {
+            // 尝试获取属性验证 Audio Unit 是否真正可用
+            var propertySize = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
+            var testFormat = AudioStreamBasicDescription()
+            let status = AudioUnitGetProperty(
+                unit,
+                kAudioUnitProperty_StreamFormat,
+                kAudioUnitScope_Input,
+                1,
+                &testFormat,
+                &propertySize
+            )
+
+            if status == noErr {
+                log.debug("Audio Unit 已初始化且有效,跳过重复初始化")
+                return
+            } else {
+                // Audio Unit 无效,清空并重新创建
+                log.warning("Audio Unit 指针存在但已失效 (status: \(status)),重新初始化")
+                audioUnit = nil
+                avAudioConverter = nil
+                inputAVFormat = nil
+            }
+        }
+
         // 1. 获取 HAL Output Audio Unit 组件描述
         var componentDesc = AudioComponentDescription(
             componentType: kAudioUnitType_Output,
@@ -171,9 +195,10 @@ class AudioUnitRecorder: @unchecked Sendable {
             throw NSError(domain: "AudioUnit", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Failed to disable output: \(status)"])
         }
 
-        // 4. 设置输入设备
-        let targetDeviceID = AudioDeviceManager.shared.selectedDeviceID ?? AudioDeviceManager.shared.defaultInputDeviceID
-        var deviceID = targetDeviceID
+        // 4. 设置输入设备（若用户设备已失效则回退到系统默认）
+        let deviceManager = AudioDeviceManager.shared
+        let preferredDeviceID = deviceManager.selectedDeviceID
+        var deviceID = deviceManager.currentInputDeviceID()
         status = AudioUnitSetProperty(
             unit,
             kAudioOutputUnitProperty_CurrentDevice,
@@ -182,6 +207,25 @@ class AudioUnitRecorder: @unchecked Sendable {
             &deviceID,
             UInt32(MemoryLayout<AudioDeviceID>.size)
         )
+
+        if status != noErr, deviceID != deviceManager.defaultInputDeviceID {
+            log.warning("指定输入设备不可用(\(deviceID)),回退到系统默认: \(deviceManager.defaultInputDeviceID)")
+            deviceID = deviceManager.defaultInputDeviceID
+            status = AudioUnitSetProperty(
+                unit,
+                kAudioOutputUnitProperty_CurrentDevice,
+                kAudioUnitScope_Global,
+                0,
+                &deviceID,
+                UInt32(MemoryLayout<AudioDeviceID>.size)
+            )
+
+            // 清空失效的用户选择,避免后续继续失败
+            if status == noErr, preferredDeviceID != nil {
+                deviceManager.selectedDeviceID = nil
+            }
+        }
+
         guard status == noErr else {
             throw NSError(domain: "AudioUnit", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Failed to set device: \(status)"])
         }
@@ -235,14 +279,28 @@ class AudioUnitRecorder: @unchecked Sendable {
             throw NSError(domain: "AudioUnit", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Failed to set callback: \(status)"])
         }
 
-        // 8. 创建格式转换器（保持与 AudioEngine 一致的高质量重采样）
+        // 8. 设置最大帧数 (关键: 必须在初始化前设置)
+        var maxFrames: UInt32 = 4096
+        status = AudioUnitSetProperty(
+            unit,
+            kAudioUnitProperty_MaximumFramesPerSlice,
+            kAudioUnitScope_Global,
+            0,
+            &maxFrames,
+            UInt32(MemoryLayout<UInt32>.size)
+        )
+        guard status == noErr else {
+            throw NSError(domain: "AudioUnit", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Failed to set max frames: \(status)"])
+        }
+
+        // 9. 创建格式转换器（保持与 AudioEngine 一致的高质量重采样）
         inputAVFormat = AVAudioFormat(streamDescription: &inputFormat)
         if let inputAVFormat {
             avAudioConverter = AVAudioConverter(from: inputAVFormat, to: targetAVFormat)
             avAudioConverter?.sampleRateConverterAlgorithm = AVSampleRateConverterAlgorithm_Mastering
         }
 
-        // 9. 初始化 Audio Unit
+        // 10. 初始化 Audio Unit
         status = AudioUnitInitialize(unit)
         guard status == noErr else {
             throw NSError(domain: "AudioUnit", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Failed to initialize audio unit: \(status)"])
@@ -390,18 +448,31 @@ class AudioUnitRecorder: @unchecked Sendable {
             return
         }
 
-        resetState()
+        // 重置录音状态,但不清理 Audio Unit
+        resetRecordingState()
         recordState = .recording
         recordMode = mode
 
         do {
+            // 延迟初始化: 只在首次或重建后初始化
             try setupAudioUnit()
 
             guard let unit = audioUnit else {
                 throw NSError(domain: "AudioUnit", code: -1, userInfo: [NSLocalizedDescriptionKey: "Audio unit not initialized"])
             }
 
-            let status = AudioOutputUnitStart(unit)
+            // 启动 Audio Unit (不重新初始化)
+            var status = AudioOutputUnitStart(unit)
+
+            // 如果错误是 -10867 (kAudioUnitErr_CannotDoInCurrentContext)
+            // 可能是 Audio Unit 已在运行,先停止再启动
+            if status == -10867 {
+                log.warning("Audio Unit 可能已在运行,尝试先停止再启动")
+                AudioOutputUnitStop(unit)
+                status = AudioOutputUnitStart(unit)
+            
+            }
+
             guard status == noErr else {
                 throw NSError(domain: "AudioUnit", code: Int(status), userInfo: [NSLocalizedDescriptionKey: "Failed to start audio unit: \(status)"])
             }
@@ -426,9 +497,10 @@ class AudioUnitRecorder: @unchecked Sendable {
 
         recordState = .stopping
 
-        // 停止 Audio Unit
+        // 只停止 Audio Unit,不销毁
         if let unit = audioUnit {
             AudioOutputUnitStop(unit)
+            log.debug("Audio Unit 已停止 (实例保留)")
         }
 
         // 刷新编码器缓冲区
@@ -461,9 +533,14 @@ class AudioUnitRecorder: @unchecked Sendable {
         saveRecordingToLocalFile()
         recordState = .idle
 
-        // 清理 Audio Unit
-        cleanup()
+        // 不再清理 Audio Unit,保留实例供下次复用
+        // cleanup() 已移除
 
+        resetRecordingState()
+    }
+
+    // 新增: 重置录音状态但保留 Audio Unit
+    private func resetRecordingState() {
         audioQueue.removeAll()
         totalPacketsSent = 0
         totalBytesSent = 0
@@ -485,34 +562,40 @@ class AudioUnitRecorder: @unchecked Sendable {
             AudioOutputUnitStop(unit)
             AudioUnitUninitialize(unit)
             AudioComponentInstanceDispose(unit)
-            audioUnit = nil
         }
 
+        audioUnit = nil
         avAudioConverter = nil
+        inputAVFormat = nil
+
+        log.debug("Audio Unit Cleaned Up!")
     }
 
     // MARK: - 设备切换
 
     @MainActor
     private func reconfigureAudioUnit() async {
-        log.info("🔄 Reconfigure Audio Unit".yellow)
-
         let wasRecording = recordState == .recording
 
         if wasRecording {
             stopRecording(stopState: .idle, shouldSetResponseTimer: false)
         }
 
+        // 设备切换时必须完全重建 Audio Unit
         cleanup()
 
-        // 等待设备稳定
+        // 等待设备稳定和资源释放
+        // 这个延迟很重要,确保:
+        // 1. 旧设备资源完全释放
+        // 2. 新设备完全激活
+        // 3. 系统音频服务器状态稳定
         try? await Task.sleep(nanoseconds: 500_000_000) // 500ms
 
         if wasRecording {
             startRecording(mode: recordMode)
         }
 
-        log.info("🔄 Audio Unit reconfigured")
+        log.info("✅ Audio Unit 已重新配置".yellow)
     }
 
     // MARK: - 辅助方法
