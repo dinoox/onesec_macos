@@ -772,6 +772,7 @@ extension AudioUnitRecorder {
     }
 
     private func flushAudioQueue() {
+        guard !audioQueue.isEmpty else { return }
         while let audioData = audioQueue.popFirst() {
             sendAudioData(audioData)
         }
