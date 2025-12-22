@@ -57,7 +57,7 @@ class ConnectionCenter: @unchecked Sendable {
     }
 
     func isWssServerConnected() -> Bool {
-        wssClient.connectionState.isConnected
+        wssClient.connectionState == .connected
     }
 
     func isNetworkAvailable() -> Bool {
@@ -72,7 +72,7 @@ class ConnectionCenter: @unchecked Sendable {
     }
 
     func hasRecordingNetworkError() -> Bool {
-        wssClient.connectionState == .connected(.errorOccurred)
+        wssClient.hasRecordingNetworkError
     }
 
     func connectWss() {
@@ -136,7 +136,7 @@ extension ConnectionCenter {
             }
             .receive(on: DispatchQueue.main)
             .sink { state in
-                guard case .connected = state.previous,
+                guard state.previous == .connected,
                       let current = state.current,
                       current == .disconnected || current == .cancelled || current == .failed,
                       self.networkState == .available
@@ -144,8 +144,9 @@ extension ConnectionCenter {
                     return
                 }
 
-                guard case .connected(.idle) = self.wssClient.connectionState else {
-                    self.wssClient.connectionState = .connected(.errorOccurred)
+                guard !self.wssClient.isRecordingStartConfirmed else {
+                    log.warning("WSS state changed to disconnected, but recording start confirmed, set has error flag")
+                    self.wssClient.hasRecordingNetworkError = true
                     return
                 }
 
@@ -160,8 +161,9 @@ extension ConnectionCenter {
             .receive(on: DispatchQueue.main)
             .sink { state in
                 guard state.previous == .available, state.current == .unavailable else { return }
-                guard case .connected(.idle) = self.wssClient.connectionState else {
-                    self.wssClient.connectionState = .connected(.errorOccurred)
+                guard !self.wssClient.isRecordingStartConfirmed else {
+                    log.warning("Network unavailable, but recording start confirmed, set has error flag")
+                    self.wssClient.hasRecordingNetworkError = true
                     return
                 }
 

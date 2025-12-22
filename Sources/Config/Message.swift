@@ -99,7 +99,7 @@ enum NotificationMessageType: Equatable {
     // 4. networkState 连接从 .available 变为未连接且当前未在录音过程中 -> duringRecording 值为录音器是否已启动
     case networkUnavailable(duringRecording: Bool)
     // 服务端返回错误  (已在录音过程中则忽略所有错误)
-    case error(title: String, content: String)
+    case error(title: String, content: String, errorCode: String)
 
     var title: String {
         switch self {
@@ -115,7 +115,7 @@ enum NotificationMessageType: Equatable {
             "服务不可用"
         case .networkUnavailable:
             "网络不可用"
-        case let .error(title, _):
+        case let .error(title, _, _):
             title
         }
     }
@@ -134,7 +134,7 @@ enum NotificationMessageType: Equatable {
             "服务不可用，请检查网络连接"
         case .networkUnavailable:
             "网络不可用，请检查网络连接"
-        case let .error(_, content):
+        case let .error(_, content, _):
             content
         }
     }

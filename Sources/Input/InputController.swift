@@ -180,7 +180,7 @@ class InputController {
         }
 
         guard
-            ConnectionCenter.shared.wssState.isConnected
+            ConnectionCenter.shared.wssState == .connected
             || ConnectionCenter.shared.wssState == .manualDisconnected
         else {
             EventBus.shared.publish(.notificationReceived(.networkUnavailable(duringRecording: false)))

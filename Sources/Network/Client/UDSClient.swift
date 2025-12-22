@@ -81,7 +81,7 @@ final class UDSClient: @unchecked Sendable {
 
             switch state {
             case .ready:
-                connectionState = .connected(.idle)
+                connectionState = .connected
                 startMessagePolling()
                 log.info("connected")
             case .failed:

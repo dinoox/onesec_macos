@@ -100,7 +100,7 @@ extension StatusView {
         case let .notificationReceived(notificationType):
             log.info("Receive notification: \(notificationType)")
 
-            // 这种情况由 AudioUnitRecorder 处理
+            // 由 AudioUnitRecorder 处理
             if case .serverUnavailable = notificationType {
                 return
             }
@@ -116,26 +116,32 @@ extension StatusView {
                 autoCloseDuration = 15
             }
 
-            let onTap = notificationType == .serverTimeout
-                ? { EventBus.shared.publish(.recordingInterrupted) }
-                : nil
+            let shouldShowAction: Bool = {
+                if case let .error(_, _, errorCode) = notificationType {
+                    return errorCode != "ASR_LIMIT_EXCEEDED"
+                }
+                return notificationType == .serverTimeout
+            }()
 
-            let actionButtons = notificationType == .serverTimeout
-                ? [
-                    ActionButton(title: "前往历史纪录") {
-                        EventBus.shared.publish(.recordingInterrupted)
-                    },
-                ]
+            let finalNotificationType = shouldShowAction
+                ? NotificationMessageType.recordingInterruptedByNetwork
+                : notificationType
+
+            let actionButtons = shouldShowAction
+                ? [ActionButton(title: "前往历史纪录") {
+                    EventBus.shared.publish(.recordingInterrupted)
+                }]
                 : nil
 
             showNotificationMessage(
-                title: notificationType.title, content: notificationType.content,
-                type: notificationType.type,
-                autoHide: notificationType.shouldAutoHide,
-                onTap: onTap,
+                title: finalNotificationType.title,
+                content: finalNotificationType.content,
+                type: finalNotificationType.type,
+                autoHide: finalNotificationType.shouldAutoHide,
+                onTap: shouldShowAction ? { EventBus.shared.publish(.recordingInterrupted) } : nil,
                 actionButtons: actionButtons,
                 showTimerTip: showTimerTip,
-                autoCloseDuration: autoCloseDuration,
+                autoCloseDuration: autoCloseDuration
             )
         case let .hotWordAddRequested(word):
             ContentCard<EmptyView>.show(title: "热词添加", content: "检测到热词 \"\(word)\", 是否添加到词库？", actionButtons: [

@@ -703,7 +703,7 @@ extension AudioUnitRecorder {
                     switch messageType {
                     case .serverTimeout:
                         Task { @MainActor in
-                            self?.saveAudioToDatabase(error: messageType.title)
+                            self?.saveAudioToDatabase(error: "转录未完成，你可在此处重新转录")
                             self?.resetState()
                         }
 
@@ -719,6 +719,7 @@ extension AudioUnitRecorder {
 
                     case .error:
                         Task { @MainActor in
+                            self?.saveAudioToDatabase(error: "转录未完成，你可在此处重新转录")
                             self?.resetState()
                         }
 
@@ -726,7 +727,7 @@ extension AudioUnitRecorder {
                         log.error("Server unavailable, stop recording")
                         Task { @MainActor in
                             if self?.recordState == .processing {
-                                self?.saveAudioToDatabase(error: messageType.title)
+                                self?.saveAudioToDatabase(error: "转录未完成，你可在此处重新转录")
                                 self?.resetState()
                             } else {
                                 self?.stopRecording(stopState: .idle, shouldSetResponseTimer: false)
