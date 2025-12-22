@@ -163,8 +163,6 @@ struct StatusIndicator: View {
                     .scaleEffect(isFreeRecording ? 1 : 0.5, anchor: .bottom)
                     .fixedSize()
             )
-
-            // .background(Color.red)
             .animation(.quickSpringAnimation, value: isFreeRecording)
             .scaleEffect(isHovered ? 1.5 : 1.0, anchor: .bottom)
             .offset(y: state == .idle ? 0 : (isFreeRecording ? -2 : -4) - (outerSize - baseSize) / 2)
@@ -173,7 +171,6 @@ struct StatusIndicator: View {
             .animation(.quickSpringAnimation, value: isHovered)
             .animation(.quickSpringAnimation, value: state)
             .compatibleHover { hovering in
-                // Free mode 下需要保持鼠标事件可用，以便点击按钮
                 if isFreeRecording {
                     Task { @MainActor in
                         StatusPanelManager.shared.ignoresMouseEvents(ignore: false)

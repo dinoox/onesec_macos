@@ -152,7 +152,7 @@ struct NotificationCard: View {
                     startAutoCloseTimer()
                 } else {
                     Task { @MainActor in
-                        try? await sleep(UInt64(autoCloseDuration) * 1000)
+                        try? await sleep(Int64(autoCloseDuration) * 1000)
                         guard !Task.isCancelled else { return }
                         OverlayController.shared.hideOverlay(uuid: panelId)
                     }
@@ -167,7 +167,7 @@ struct NotificationCard: View {
     private func startAutoCloseTimer() {
         timerTask = Task { @MainActor in
             progress = 0
-            try? await sleep(UInt64(autoCloseDuration) * 1000)
+            try? await sleep(Int64(autoCloseDuration) * 1000)
             guard !Task.isCancelled else { return }
             OverlayController.shared.hideOverlay(uuid: panelId)
         }

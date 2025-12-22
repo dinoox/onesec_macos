@@ -16,6 +16,9 @@ class InputController {
     var audioRecorder: AudioUnitRecorder = .init()
     var keyEventProcessor: KeyEventProcessor = .init()
 
+    /// 延时执行的 stopRecording
+    private var pendingStopTask: Task<Void, Never>?
+
     /// 事件监听器
     private var eventTap: CFMachPort?
     private var eventLock = os_unfair_lock_s()
@@ -130,12 +133,30 @@ class InputController {
 
         switch keyEventProcessor.handlekeyEvent(type: type, event: event) {
         case let .startMatch(mode):
+            log.debug("startMatch \(mode)".red)
             startRecording(mode: mode)
             return isSpaceKey ? nil : Unmanaged.passUnretained(event)
-        case .endMatch:
-            stopRecording()
+        case let .endMatch(mode):
+            if mode == .normal, audioRecorder.currentRecordingDuration() < 0.5 {
+                pendingStopTask?.cancel()
+
+                pendingStopTask = Task {
+                    try? await sleep(500)
+
+                    guard !Task.isCancelled else { return }
+
+                    await MainActor.run {
+                        self.pendingStopTask = nil
+                        self.stopRecording()
+                    }
+                }
+            } else {
+                stopRecording()
+            }
             return isSpaceKey ? nil : Unmanaged.passUnretained(event)
         case let .modeUpgrade(from, to):
+            pendingStopTask?.cancel()
+            pendingStopTask = nil
             modeUpgrade(from: from, to: to)
             return isSpaceKey ? nil : Unmanaged.passUnretained(event)
         case .throttled, .stillMatching, .notMatching:

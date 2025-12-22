@@ -223,7 +223,7 @@ class OverlayController {
         }
 
         Task { @MainActor in
-            try? await sleep(UInt64(delay * 1000))
+            try? await sleep(Int64(delay * 1000))
             guard !Task.isCancelled else { return }
             hideOverlay(uuid: uuid)
         }
@@ -231,6 +231,12 @@ class OverlayController {
 
     func getPanel(uuid: UUID) -> NSPanel? {
         panels[uuid]
+    }
+
+    func hasStatusPanelTrigger() -> Bool {
+        return panels.values.contains { panel in
+            panel.panelType?.canShowStatusPanel == true
+        }
     }
 }
 
@@ -493,13 +499,9 @@ private extension OverlayController {
     }
 
     func handlePanelsChanged() {
-        let hasStatusPanelTrigger = panels.values.contains { panel in
-            panel.panelType?.canShowStatusPanel == true
-        }
-
-        if hasStatusPanelTrigger, Config.shared.USER_CONFIG.setting.hideStatusPanel {
+        if hasStatusPanelTrigger(), Config.shared.USER_CONFIG.setting.hideStatusPanel {
             StatusPanelManager.shared.showPanel()
-        } else if !hasStatusPanelTrigger, Config.shared.USER_CONFIG.setting.hideStatusPanel, ConnectionCenter.shared.audioRecorderState == .idle {
+        } else if !hasStatusPanelTrigger(), Config.shared.USER_CONFIG.setting.hideStatusPanel, ConnectionCenter.shared.audioRecorderState == .idle {
             StatusPanelManager.shared.hidePanel()
         }
     }

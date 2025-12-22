@@ -10,6 +10,7 @@ import SwiftUI
 
 let auroraGreen = Color(hex: "#2EDDA8")
 let starlightYellow = Color(hex: "#FFD479")
+let primaryYellow = Color(red: 245 / 255, green: 193 / 255, blue: 87 / 255)
 let borderGrey = Color(hex: "#888888B2")
 let destructiveRed = Color(hex: "#FF383C")
 
@@ -43,7 +44,7 @@ extension Color {
     }
 
     static var overlayPrimary: Color {
-        adaptive(light: auroraGreen, dark: Color(red: 245 / 255, green: 193 / 255, blue: 87 / 255))
+        adaptive(light: auroraGreen, dark: primaryYellow)
     }
 
     static var overlaySecondaryPrimary: Color {

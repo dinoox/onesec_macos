@@ -16,6 +16,7 @@ struct ContentCard<CustomContent: View>: View {
     let customContent: (() -> CustomContent)?
     let cardWidth: CGFloat
     let panelType: PanelType?
+    let canPaste: Bool
 
     private let autoCloseDuration = 9
     private let maxContentHeight: CGFloat = 200
@@ -38,6 +39,7 @@ struct ContentCard<CustomContent: View>: View {
         cardWidth: CGFloat = 300,
         showActionBar: Bool = true,
         panelType: PanelType? = nil,
+        canPaste: Bool = true,
         @ViewBuilder customContent: @escaping () -> CustomContent
     ) {
         self.panelID = panelID
@@ -48,6 +50,7 @@ struct ContentCard<CustomContent: View>: View {
         self.cardWidth = cardWidth
         self.showActionBar = showActionBar
         self.panelType = panelType
+        self.canPaste = canPaste
         self.customContent = customContent
     }
 
@@ -65,26 +68,26 @@ struct ContentCard<CustomContent: View>: View {
                 // Title Bar
                 HStack(spacing: 8) {
                     HStack(spacing: 5) {
-                        Image.systemSymbol(panelType?.titleIcon ?? "mic")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundColor(.overlayText)
-                        Text(title)
+                        Image.systemSymbol(canPaste ? (panelType?.titleIcon ?? "mic") : "exclamationmark.triangle")
+                            .font(.system(size: canPaste ? 14 : 15, weight: canPaste ? .medium : .semibold))
+                            .foregroundColor(canPaste ? .overlayText : primaryYellow)
+                        Text(canPaste ? title : "请先点击输入框再开始录音")
                             .font(.system(size: 14, weight: .regular))
                             .foregroundColor(.overlayText)
                             .lineLimit(1)
                     }
 
                     Spacer()
-
+                    
                     ZStack {
-                        if let appIcon = frontmostAppIcon {
-                            Image(nsImage: appIcon)
-                                .resizable()
-                                .frame(width: 16, height: 16)
-                                .opacity(isHovering ? 0 : 1)
-                                .scaleEffect(isHovering ? 0.8 : 1)
-                                .animation(.easeInOut(duration: 0.2), value: isHovering)
-                        }
+                        // if let appIcon = frontmostAppIcon {
+                        //     Image(nsImage: appIcon)
+                        //         .resizable()
+                        //         .frame(width: 16, height: 16)
+                        //         .opacity(isHovering ? 0 : 1)
+                        //         .scaleEffect(isHovering ? 0.8 : 1)
+                        //         .animation(.easeInOut(duration: 0.2), value: isHovering)
+                        // }
 
                         Button(action: closeCard) {
                             Image.systemSymbol("xmark")
@@ -104,19 +107,37 @@ struct ContentCard<CustomContent: View>: View {
                     customContent()
                 } else {
                     ScrollView(.vertical, showsIndicators: contentHeight > maxContentHeight) {
-                        Text(content)
-                            .font(.system(size: 13.5, weight: .regular))
-                            .foregroundColor(.overlaySecondaryText)
-                            .lineSpacing(3.8)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .background(
-                                GeometryReader { geometry in
-                                    Color.clear.onAppear {
-                                        contentHeight = geometry.size.height
-                                    }
+                        VStack(spacing: 8) {
+                            if !canPaste {
+                                Text("识别内容暂存如下")
+                                    .font(.system(size: 13.5, weight: .regular))
+                                    .foregroundColor(.overlayText)
+                                    .lineSpacing(3.8)
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .frame(maxWidth: .infinity, alignment: .leading)
+                            }
+
+                            Text(content)
+                                .font(.system(size: 13.5, weight: .regular))
+                                .foregroundColor(.overlaySecondaryText)
+                                .lineSpacing(3.8)
+                                .fixedSize(horizontal: false, vertical: true)
+                                .frame(maxWidth: .infinity, alignment: .leading)
+                                .if(!canPaste) { view in
+                                    view
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                        .background(Color.overlaySecondaryBackground)
+                                        .clipShape(RoundedRectangle(cornerRadius: 6))
                                 }
-                            )
+                        }
+                        .background(
+                            GeometryReader { geometry in
+                                Color.clear.onAppear {
+                                    contentHeight = geometry.size.height
+                                }
+                            }
+                        )
                     }
                     .tryScrollDisabled(contentHeight <= maxContentHeight)
                     .frame(maxHeight: maxContentHeight)
@@ -244,7 +265,8 @@ extension ContentCard where CustomContent == EmptyView {
         onTap: (() -> Void)? = nil,
         actionButtons: [ActionButton]? = nil,
         cardWidth: CGFloat = 250,
-        panelType: PanelType? = nil
+        panelType: PanelType? = nil,
+        canPaste: Bool = false
     ) {
         self.panelID = panelID
         self.title = title
@@ -253,20 +275,21 @@ extension ContentCard where CustomContent == EmptyView {
         self.actionButtons = actionButtons
         self.cardWidth = cardWidth
         self.panelType = panelType
+        self.canPaste = canPaste
         customContent = nil
     }
 }
 
 extension ContentCard {
-    static func show(title: String, content: String, onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250, spacingX: CGFloat = 0, spacingY: CGFloat = 0, panelType: PanelType? = nil) {
+    static func show(title: String, content: String, onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250, spacingX: CGFloat = 0, spacingY: CGFloat = 0, panelType: PanelType? = nil, canPaste: Bool = true) {
         OverlayController.shared.showOverlay(content: { panelID in
-            ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons, cardWidth: cardWidth, panelType: panelType)
+            ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons, cardWidth: cardWidth, panelType: panelType, canPaste: canPaste)
         }, spacingX: spacingX, spacingY: spacingY, panelType: panelType)
     }
 
-    static func showAboveSelection(title: String, content: String, onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250, spacingX: CGFloat = 0, spacingY: CGFloat = 0, panelType: PanelType? = nil) {
+    static func showAboveSelection(title: String, content: String, onTap: (() -> Void)? = nil, actionButtons: [ActionButton]? = nil, cardWidth: CGFloat = 250, spacingX: CGFloat = 0, spacingY: CGFloat = 0, panelType: PanelType? = nil, canPaste: Bool = true) {
         OverlayController.shared.showOverlayAboveSelection(content: { panelID in
-            ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons, cardWidth: cardWidth, panelType: panelType)
+            ContentCard<EmptyView>(panelID: panelID, title: title, content: content, onTap: onTap, actionButtons: actionButtons, cardWidth: cardWidth, panelType: panelType, canPaste: canPaste)
         }, spacingX: spacingX, spacingY: spacingY, panelType: panelType)
     }
 }

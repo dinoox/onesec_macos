@@ -1,8 +1,8 @@
 import AudioToolbox
 import Foundation
 
-func sleep(_ milliseconds: UInt64) async throws {
-    try await Task.sleep(nanoseconds: milliseconds * 1_000_000)
+func sleep(_ milliseconds: Int64) async throws {
+    try await Task.sleep(nanoseconds: UInt64(milliseconds) * 1_000_000)
 }
 
 func toWavData(fromPCM pcmData: Data, targetFormat: AudioStreamBasicDescription) -> Data {

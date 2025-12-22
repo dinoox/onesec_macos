@@ -443,6 +443,13 @@ class AudioUnitRecorder: @unchecked Sendable {
 
     // MARK: - 录音控制
 
+    func currentRecordingDuration() -> TimeInterval {
+        guard let startTime = recordingStartTime else {
+            return 0
+        }
+        return Date().timeIntervalSince(startTime)
+    }
+
     @MainActor
     func startRecording(mode: RecordMode = .normal) {
         guard recordState == .idle else {

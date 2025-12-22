@@ -124,7 +124,7 @@ class WebSocketAudioStreamer: @unchecked Sendable {
         log.info("WebSocket reconnecting in \(delay)s, reason: \(reason), attempt: \(curRetryCount)")
 
         Task { [weak self] in
-            try? await sleep(UInt64(delay * 1000))
+            try? await sleep(Int64(delay * 1000))
             self?.connect()
         }
     }
@@ -411,7 +411,7 @@ extension WebSocketAudioStreamer {
 
         responseTimeoutTask = Task { [weak self] in
             guard let self else { return }
-            try? await sleep(UInt64(responseTimeoutDuration * 1000))
+            try? await sleep(Int64(responseTimeoutDuration * 1000))
             guard !Task.isCancelled else { return }
             log.warning("录音响应超时 (\(responseTimeoutDuration)s)")
             EventBus.shared.publish(.notificationReceived(.serverTimeout))
@@ -429,7 +429,7 @@ extension WebSocketAudioStreamer {
 
         recordingStartedTimeoutTask = Task { [weak self] in
             guard let self else { return }
-            try? await sleep(UInt64(recordingStartedTimeoutDuration * 1000))
+            try? await sleep(Int64(recordingStartedTimeoutDuration * 1000))
             guard !Task.isCancelled else { return }
 
             log.warning("录音开始响应超时 (\(recordingStartedTimeoutDuration)s)")
@@ -466,7 +466,7 @@ extension WebSocketAudioStreamer {
             guard let self else { return }
 
             do {
-                try await sleep(UInt64(idleTimeoutDuration * 1000))
+                try await sleep(Int64(idleTimeoutDuration * 1000))
                 log.warning("No recording activity for \(idleTimeoutDuration / 60) minutes, disconnecting")
                 disconnect()
             } catch {
@@ -514,7 +514,7 @@ extension WebSocketAudioStreamer {
         pongCheckTask?.cancel()
         pongCheckTask = Task { [weak self] in
             guard let self else { return }
-            try? await sleep(UInt64(pongTimeout * 1000))
+            try? await sleep(Int64(pongTimeout * 1000))
             guard !Task.isCancelled else { return }
 
             if let lastPong = self.lastPongTime {

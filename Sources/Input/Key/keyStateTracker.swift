@@ -11,7 +11,7 @@ import Foundation
 
 enum KeyMatchResult {
     case startMatch(RecordMode) // 从不匹配变为匹配
-    case endMatch // 从匹配变为不匹配
+    case endMatch(RecordMode) // 从匹配变为不匹配
     case stillMatching // 持续匹配
     case notMatching // 持续不匹配
     case modeUpgrade(from: RecordMode, to: RecordMode) // 模式转换
@@ -86,8 +86,8 @@ class KeyStateTracker {
 
         switch type {
         case .flagsChanged:
-            let completedKeys = handleModifierChange(keyCode: keyCode, newModifiers: event.flags)
-            if let completedKeys {
+            let result = handleModifierChange(keyCode: keyCode, newModifiers: event.flags)
+            if let completedKeys = result.keys {
                 // 修饰键松开，完成设置
                 return (true, completedKeys)
             }
@@ -123,39 +123,43 @@ class KeyStateTracker {
     func handleKeyEventWithMatch(type: CGEventType, event: CGEvent) -> KeyMatchResult {
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
 
+        var isKeyDown = false
         switch type {
         case .flagsChanged:
-            _ = handleModifierChange(keyCode: keyCode, newModifiers: event.flags)
+            let result = handleModifierChange(keyCode: keyCode, newModifiers: event.flags)
+            isKeyDown = result.isPressed
 
         case .keyDown:
             addKey(keyCode)
 
         case .keyUp:
             removeKey(keyCode)
-            return isFreeRecording || isCurrentlyMatched ? .stillMatching : .notMatching
+            // return isFreeRecording || isCurrentlyMatched ? .stillMatching : .notMatching
 
         default:
             break
         }
 
-        return checkMatchStatus()
+        return checkMatchStatus(isKeyDown: type == .keyDown ? true : isKeyDown)
     }
 
-    private func handleModifierChange(keyCode: Int64, newModifiers: CGEventFlags) -> [Int64]? {
+    private func handleModifierChange(keyCode: Int64, newModifiers: CGEventFlags) -> (keys: [Int64]?, isPressed: Bool) {
         let isPressed = modifierMasks.contains { newModifiers.contains($0) && !currentModifiers.contains($0) }
         let isReleased = modifierMasks.contains { !newModifiers.contains($0) && currentModifiers.contains($0) }
 
         if isPressed {
             addKey(keyCode)
+            currentModifiers = newModifiers
+            return (nil, true) // 按下状态
         } else if isReleased {
             let keysBeforeRemove = Array(pressedKeys)
             removeKey(keyCode)
             currentModifiers = newModifiers
-            return keysBeforeRemove // 返回松开前的完整快捷键组合
+            return (keysBeforeRemove, false) // 松开状态，返回松开前的完整快捷键组合
         }
 
         currentModifiers = newModifiers
-        return nil
+        return (nil, false) // 无变化
     }
 
     private func addKey(_ keyCode: Int64) {
@@ -166,10 +170,26 @@ class KeyStateTracker {
         pressedKeys.remove(keyCode)
     }
 
-    private func checkMatchStatus() -> KeyMatchResult {
-        // 检查 free 模式的按键是否当前匹配
-        let freeConfig = keyConfigs.first { $0.mode == .free }
-        let isFreeKeyMatched = freeConfig.map { Set($0.keyCodes).isSubset(of: pressedKeys) } ?? false
+    // private func
+
+    private func checkMatchStatus(isKeyDown: Bool) -> KeyMatchResult {
+        // 统一查找所有匹配的配置
+        let matchedConfigs = keyConfigs
+            .filter { Set($0.keyCodes).isSubset(of: pressedKeys) }
+
+        let normalConfig = matchedConfigs.first { $0.mode == .normal }
+        let isNormalKeyMatched = normalConfig != nil
+
+        if isFreeRecording && isNormalKeyMatched && isKeyDown {
+            log.debug("自由模式下普通模式匹配, 停止录音".yellow)
+            isFreeRecording = false
+            isCurrentlyMatched = false
+            currentActiveMode = nil
+            return .endMatch(currentActiveMode ?? .normal)
+        }
+
+        let freeConfig = matchedConfigs.first { $0.mode == .free }
+        let isFreeKeyMatched = freeConfig != nil
 
         // 自由模式：检测按键按下（从不匹配变为匹配）来 toggle 状态
         // 命令模式下不允许切换到自由模式
@@ -193,7 +213,7 @@ class KeyStateTracker {
                 log.info("❌ 自由模式停止录音")
                 isCurrentlyMatched = false
                 currentActiveMode = nil
-                return .endMatch
+                return .endMatch(currentActiveMode ?? .normal)
             }
         }
         wasFreeKeyMatched = isFreeKeyMatched
@@ -208,14 +228,14 @@ class KeyStateTracker {
             if isCurrentlyMatched {
                 isCurrentlyMatched = false
                 currentActiveMode = nil
-                return .endMatch
+                return .endMatch(currentActiveMode ?? .normal)
             }
             return .notMatching
         }
 
-        // 检查是否匹配 normal/command 配置（排除 free 模式）
-        let matchedConfig = keyConfigs
-            .filter { $0.mode != .free && Set($0.keyCodes).isSubset(of: pressedKeys) }
+        // 从已匹配的配置中找 normal/command 模式的最精确匹配
+        let matchedConfig = matchedConfigs
+            .filter { $0.mode != .free }
             .max(by: { $0.keyCodes.count < $1.keyCodes.count })
 
         let isNowMatched = matchedConfig != nil
@@ -224,7 +244,19 @@ class KeyStateTracker {
         if isNowMatched, !isCurrentlyMatched {
             // 从不匹配变为匹配 -> 检查防抖
             let currentTime = Date().timeIntervalSince1970
-            if currentTime - lastStartMatchTime < 1.0 {
+            let timeSinceLastStart = currentTime - lastStartMatchTime
+
+            // 双击检测：normal 模式 0.5 秒内再次触发 -> 升级到 free 模式
+            if newMode == .normal, timeSinceLastStart < 0.5, lastStartMatchTime > 0 {
+                log.info("🎯 双击普通模式，升级到自由模式")
+                isFreeRecording = true
+                isCurrentlyMatched = true
+                currentActiveMode = .free
+                lastStartMatchTime = currentTime
+                return .modeUpgrade(from: .normal, to: .free)
+            }
+
+            if timeSinceLastStart < 1.0 {
                 log.info("🤡 防抖限制: \(newMode == .normal ? "普通模式" : "命令模式")")
                 return .throttled(newMode!)
             }
@@ -241,8 +273,9 @@ class KeyStateTracker {
             log.info("❌ 按键组合不再匹配: \(currentActiveMode!.rawValue)")
 
             isCurrentlyMatched = false
+            let mode = currentActiveMode!
             currentActiveMode = nil
-            return .endMatch
+            return .endMatch(mode)
 
         } else if isNowMatched, isCurrentlyMatched {
             // 持续匹配状态，但需要检查是否有模式转换

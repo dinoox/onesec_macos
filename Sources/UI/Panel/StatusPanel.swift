@@ -80,13 +80,19 @@ class StatusPanel: NSPanel {
             },
             completionHandler: {
                 // 更新位置
-                self.setFrame(newFrame, display: true, animate: false)
+                Task { @MainActor in
+                    self.setFrame(newFrame, display: true, animate: false)
 
-                // 再淡入
-                NSAnimationContext.runAnimationGroup { context in
-                    context.duration = 0.15
-                    context.timingFunction = CAMediaTimingFunction(name: .easeOut)
-                    self.animator().alphaValue = 1.0
+                    if !OverlayController.shared.hasStatusPanelTrigger() && Config.shared.USER_CONFIG.setting.hideStatusPanel {
+                        return
+                    }
+
+                    // 再淡入
+                    NSAnimationContext.runAnimationGroup { context in
+                        context.duration = 0.15
+                        context.timingFunction = CAMediaTimingFunction(name: .easeOut)
+                        self.animator().alphaValue = 1.0
+                    }
                 }
             },
         )

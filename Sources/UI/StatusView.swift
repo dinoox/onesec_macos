@@ -220,16 +220,17 @@ extension StatusView {
     }
 
     private func handleAlert(canPaste: Bool, processMode: TextProcessMode, text: String, polishedText: String) {
-        let cardWidth: CGFloat = getTextCardWidth(text: text)
+        var cardWidth: CGFloat = getTextCardWidth(text: text)
 
         if canPaste {
             if processMode == .translate {
                 guard Config.shared.USER_CONFIG.setting.showComparison else { return }
-                ContentCard<EmptyView>.show(title: "识别内容", content: polishedText, onTap: nil, actionButtons: nil, cardWidth: cardWidth, spacingX: 8, spacingY: 14, panelType: .translate(.above))
+                ContentCard<EmptyView>.show(title: "识别内容", content: polishedText, onTap: nil, actionButtons: nil, cardWidth: cardWidth, spacingX: 8, spacingY: 14, panelType: .translate(.above), canPaste: canPaste)
             } else if processMode == .terminal, text.newlineCount >= 1 {
                 LinuxCommandCard.show(commands: [LinuxCommand(distro: "", command: text, displayName: "")])
             }
         } else {
+            cardWidth = cardWidth < 260 ? 260 : cardWidth
             if processMode == .translate {
                 guard Config.shared.USER_CONFIG.setting.showComparison else { return }
                 MultiContentCard.show(title: "执行结果", items: [
@@ -240,12 +241,12 @@ extension StatusView {
             }
             if mode == .command {
                 if ConnectionCenter.shared.currentRecordingAppContext.focusContext.selectedText.isEmpty {
-                    ContentCard<EmptyView>.show(title: "执行结果", content: text, cardWidth: cardWidth, panelType: .command(.bottom))
+                    ContentCard<EmptyView>.show(title: "执行结果", content: text, cardWidth: cardWidth, panelType: .command(.bottom), canPaste: canPaste)
                 } else {
-                    ContentCard<EmptyView>.showAboveSelection(title: "执行结果", content: text, cardWidth: cardWidth, spacingX: 8, spacingY: 14, panelType: .command(.above))
+                    ContentCard<EmptyView>.showAboveSelection(title: "执行结果", content: text, cardWidth: cardWidth, spacingX: 8, spacingY: 14, panelType: .command(.above), canPaste: canPaste)
                 }
             } else {
-                ContentCard<EmptyView>.show(title: "识别内容", content: text, cardWidth: cardWidth, panelType: .notification)
+                ContentCard<EmptyView>.show(title: "识别内容", content: text, cardWidth: cardWidth, panelType: .notification, canPaste: canPaste)
             }
         }
     }

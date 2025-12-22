@@ -189,7 +189,7 @@ extension UDSClient {
         }
     }
 
-    private func handleConfigUpdatedMessage(json _: [String: Any], timestamp _: Int64) {
+    private func handleConfigUpdatedMessage(json: [String: Any], timestamp _: Int64) {
         let token = Config.shared.USER_CONFIG.authToken
         let hideStatusPanel = Config.shared.USER_CONFIG.setting.hideStatusPanel
         Config.shared.USER_CONFIG = UserConfigService.shared.loadUserConfig()
@@ -200,6 +200,7 @@ extension UDSClient {
             EventBus.shared.publish(.userDataUpdated(.auth))
             return
         }
+
 
         if hideStatusPanel != Config.shared.USER_CONFIG.setting.hideStatusPanel {
             Task { @MainActor in
