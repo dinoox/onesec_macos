@@ -177,13 +177,17 @@ echo_ok "Swift 运行时库嵌入完成: $(basename $SWIFT_LIB)"
 echo_step "清理 RPATH..."
 EXECUTABLE="${CONTENTS_DIR}/MacOS/${APP_NAME}"
 
+echo "当前 RPATH 配置："
+otool -l "$EXECUTABLE" | grep -A 2 "LC_RPATH" | grep "path " | awk '{print "  - " $2}'
+
 # 只移除 Xcode 工具链路径，保留其他所有 RPATH（包括重复的 /usr/lib/swift）
 install_name_tool -delete_rpath "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-5.5/macosx" "$EXECUTABLE" 2>/dev/null || true
+install_name_tool -delete_rpath "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/swift-6.2/macosx" "$EXECUTABLE" 2>/dev/null || true
 
 echo_ok "RPATH 清理完成"
 
 # 验证最终的 RPATH
-echo "当前 RPATH 配置："
+echo "清理后 RPATH 配置："
 otool -l "$EXECUTABLE" | grep -A 2 "LC_RPATH" | grep "path " | awk '{print "  - " $2}'
 
 # ============= 签名 =============
