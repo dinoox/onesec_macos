@@ -97,7 +97,6 @@ class InputController {
         }
 
         guard event.getIntegerValueField(.keyboardEventAutorepeat) == 0 else {
-            log.info("333".red)
             return Unmanaged.passUnretained(event)
         }
 
