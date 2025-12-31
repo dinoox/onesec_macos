@@ -29,6 +29,10 @@ enum MessageType: String, CaseIterable {
     case hotkeySettingStart = "hotkey_setting_start"
     case userAudioSaved = "user_audio_saved"
     case recordingInterrupted = "recording_interrupted"
+    //
+    case hotkeyDetectStart = "hotkey_detect_start"
+    case hotkeyDetectEnd = "hotkey_detect_end"
+    case hotkeyDetectUpdate = "hotkey_detect_update"
 }
 
 struct WebSocketMessage {

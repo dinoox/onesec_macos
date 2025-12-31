@@ -33,6 +33,10 @@ enum AppEvent {
     case hotkeySettingUpdated(mode: RecordMode, hotkeyCombination: [String])
     case hotkeySettingResulted(mode: RecordMode, hotkeyCombination: [String], isConflict: Bool = false)
     //
+    case hotkeyDetectStarted
+    case hotkeyDetectEnded
+    case hotkeyDetectUpdated(hotkeyCombination: [String], isCompleted: Bool)
+    //
     case hotWordAddRequested(word: String)
     //
     case mouseScreenChanged(screen: NSScreen)

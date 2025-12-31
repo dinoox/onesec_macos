@@ -44,12 +44,12 @@ final class PermissionService: ObservableObject, @unchecked Sendable {
         flushPermissionStatus()
 
         if microphonePermissionStatus == .notDetermined {
-            log.info("Microphone permission not determined, requesting...")
-            requestMicrophone { _ in }
+            log.info("Microphone permission not determined...")
+            // requestMicrophone { _ in }
         }
         if accessibilityPermissionStatus == .denied {
-            log.info("Accessibility permission denied, requesting...")
-            requestAccessibility { _ in }
+            log.info("Accessibility permission denied...")
+            // requestAccessibility { _ in }
         }
 
         completion()

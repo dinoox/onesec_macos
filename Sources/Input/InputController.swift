@@ -97,6 +97,7 @@ class InputController {
         }
 
         guard event.getIntegerValueField(.keyboardEventAutorepeat) == 0 else {
+            log.info("333".red)
             return Unmanaged.passUnretained(event)
         }
 
@@ -127,6 +128,12 @@ class InputController {
             return Unmanaged.passUnretained(event)
         }
 
+        // 拦截快捷键检测
+        if keyEventProcessor.isHotkeyDetecting {
+            keyEventProcessor.handleHotkeyDetectEvent(type: type, event: event)
+            return Unmanaged.passUnretained(event)
+        }
+
         // 正常处理按键监听
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
         let isSpaceKey = keyCode == 49 // kVK_Space
@@ -134,7 +141,7 @@ class InputController {
         switch keyEventProcessor.handlekeyEvent(type: type, event: event) {
         case let .startMatch(mode):
             startRecording(mode: mode)
-            return isSpaceKey ? nil : Unmanaged.passUnretained(event)
+            return nil
         case let .endMatch(mode):
             if mode == .normal, audioRecorder.currentRecordingDuration() < 0.5 {
                 pendingStopTask?.cancel()
@@ -158,8 +165,10 @@ class InputController {
             pendingStopTask = nil
             modeUpgrade(from: from, to: to)
             return isSpaceKey ? nil : Unmanaged.passUnretained(event)
-        case .throttled, .stillMatching, .notMatching:
+        case .throttled, .notMatching:
             return Unmanaged.passUnretained(event)
+        case .stillMatching:
+            return nil
         }
     }
 
@@ -236,6 +245,10 @@ extension InputController {
                     self?.keyEventProcessor.startHotkeySetting(mode: mode)
                 case .hotkeySettingEnded, .hotkeySettingResulted:
                     self?.keyEventProcessor.endHotkeySetting()
+                case .hotkeyDetectStarted:
+                    self?.keyEventProcessor.startHotkeyDetect()
+                case .hotkeyDetectEnded:
+                    self?.keyEventProcessor.endHotkeyDetect()
                 case .recordingCancelled:
                     Task { @MainActor in
                         self?.audioRecorder.stopRecording(stopState: .idle, shouldSetResponseTimer: false)

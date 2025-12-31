@@ -45,6 +45,8 @@ final class UDSClient: @unchecked Sendable {
                         self?.sendHotkeySettingResult(mode: mode, hotkeyCombination: hotkeyCombination)
                     }
 
+                case let .hotkeyDetectUpdated(hotkeyCombination, isCompleted): self?.sendHotkeyDetectUpdate(hotkeyCombination: hotkeyCombination, isCompleted: isCompleted)
+
                 case let .userAudioSaved(sessionID, filename): self?.sendUserAudioSaved(sessionID: sessionID, filename: filename)
 
                 case .recordingInterrupted: self?.sendRecordingInterrupted()
@@ -184,15 +186,21 @@ extension UDSClient {
             handleHotkeySettingStart(json: json)
         case .hotkeySettingEnd:
             handleHotkeySettingEnd(json: json)
+        case .hotkeyDetectStart:
+            handlehotkeyDetectStart()
+        case .hotkeyDetectEnd:
+            handlehotkeyDetectEnd()
         default:
             break
         }
     }
 
-    private func handleConfigUpdatedMessage(json: [String: Any], timestamp _: Int64) {
+    private func handleConfigUpdatedMessage(json _: [String: Any], timestamp _: Int64) {
         let token = Config.shared.USER_CONFIG.authToken
         let hideStatusPanel = Config.shared.USER_CONFIG.setting.hideStatusPanel
         Config.shared.USER_CONFIG = UserConfigService.shared.loadUserConfig()
+
+        log.info("Config updated, isFirstLaunch: \(UserConfigService.shared.isFirstLaunch)")
 
         if token != Config.shared.USER_CONFIG.authToken {
             ConnectionCenter.shared.isAuthed = JWTValidator.isValid(Config.shared.USER_CONFIG.authToken)
@@ -200,7 +208,6 @@ extension UDSClient {
             EventBus.shared.publish(.userDataUpdated(.auth))
             return
         }
-
 
         if hideStatusPanel != Config.shared.USER_CONFIG.setting.hideStatusPanel {
             Task { @MainActor in
@@ -242,6 +249,29 @@ extension UDSClient {
         Task { @MainActor in
             EventBus.shared.publish(.hotkeySettingEnded(mode: mode))
         }
+    }
+
+    private func handlehotkeyDetectStart() {
+        Task { @MainActor in
+            EventBus.shared.publish(.hotkeyDetectStarted)
+        }
+    }
+
+    private func handlehotkeyDetectEnd() {
+        Task { @MainActor in
+            EventBus.shared.publish(.hotkeyDetectEnded)
+        }
+    }
+
+    func sendHotkeyDetectUpdate(hotkeyCombination: [String], isCompleted: Bool) {
+        guard case .connected = connectionState else { return }
+
+        let data: [String: Any] = [
+            "hotkey_combination": hotkeyCombination,
+            "is_completed": isCompleted,
+        ]
+
+        sendJSONMessage(WebSocketMessage.create(type: .hotkeyDetectUpdate, data: data).toJSON())
     }
 
     func sendAuthTokenFailed(reason: String = "UnAuth", statusCode: Int? = nil) {

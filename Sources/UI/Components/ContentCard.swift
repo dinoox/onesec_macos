@@ -62,33 +62,28 @@ struct ContentCard<CustomContent: View>: View {
         .frame(width: cardWidth)
     }
 
+    private var shouldShowNormalTitle: Bool {
+        canPaste || panelType == .command(.above)
+    }
+
     private var cardContent: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(alignment: .leading, spacing: 9) {
                 // Title Bar
                 HStack(spacing: 8) {
                     HStack(spacing: 5) {
-                        Image.systemSymbol(canPaste ? (panelType?.titleIcon ?? "mic") : "exclamationmark.triangle")
-                            .font(.system(size: canPaste ? 14 : 15, weight: canPaste ? .medium : .semibold))
-                            .foregroundColor(canPaste ? .overlayText : primaryYellow)
-                        Text(canPaste ? title : "请先点击输入框再开始录音")
+                        Image.systemSymbol(shouldShowNormalTitle ? (panelType?.titleIcon ?? "mic") : "exclamationmark.triangle")
+                            .font(.system(size: shouldShowNormalTitle ? 14 : 15, weight: shouldShowNormalTitle ? .medium : .semibold))
+                            .foregroundColor(shouldShowNormalTitle ? .overlayText : primaryYellow)
+                        Text(shouldShowNormalTitle ? title : "请先点击输入框再开始录音")
                             .font(.system(size: 14, weight: .regular))
                             .foregroundColor(.overlayText)
                             .lineLimit(1)
                     }
 
                     Spacer()
-                    
-                    ZStack {
-                        // if let appIcon = frontmostAppIcon {
-                        //     Image(nsImage: appIcon)
-                        //         .resizable()
-                        //         .frame(width: 16, height: 16)
-                        //         .opacity(isHovering ? 0 : 1)
-                        //         .scaleEffect(isHovering ? 0.8 : 1)
-                        //         .animation(.easeInOut(duration: 0.2), value: isHovering)
-                        // }
 
+                    ZStack {
                         Button(action: closeCard) {
                             Image.systemSymbol("xmark")
                                 .font(.system(size: 12, weight: .semibold))
@@ -108,7 +103,7 @@ struct ContentCard<CustomContent: View>: View {
                 } else {
                     ScrollView(.vertical, showsIndicators: contentHeight > maxContentHeight) {
                         VStack(spacing: 8) {
-                            if !canPaste {
+                            if !shouldShowNormalTitle {
                                 Text("识别内容暂存如下")
                                     .font(.system(size: 13.5, weight: .regular))
                                     .foregroundColor(.overlayText)
@@ -123,7 +118,7 @@ struct ContentCard<CustomContent: View>: View {
                                 .lineSpacing(3.8)
                                 .fixedSize(horizontal: false, vertical: true)
                                 .frame(maxWidth: .infinity, alignment: .leading)
-                                .if(!canPaste) { view in
+                                .if(!shouldShowNormalTitle) { view in
                                     view
                                         .padding(.horizontal, 8)
                                         .padding(.vertical, 6)

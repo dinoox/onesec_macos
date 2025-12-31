@@ -175,6 +175,7 @@ extension StatusView {
         case let .serverResultReceived(text, _, processMode, polishedText):
             recordState = .idle
 
+      
             Task {
                 let canPaste = await canPasteNow()
                 if
@@ -228,6 +229,7 @@ extension StatusView {
         // 对于 AX 黑名单应用
         // 使用粘贴探针检测是否可以粘贴
         log.info("Fallback to paste probe")
+
         return await AXPasteProbe.isPasteAllowed()
     }
 
@@ -291,7 +293,7 @@ extension StatusView {
     private func handlePermissionChange(_ permissionsState: [PermissionType: PermissionStatus]) {
         guard !permissionsState.isEmpty else { return }
 
-        if !ConnectionCenter.shared.hasPermissions() {
+        if !ConnectionCenter.shared.hasPermissions(), !UserConfigService.shared.isFirstLaunch {
             showPermissionAlert()
             SoundService.shared.playSound(.notification)
         } else {

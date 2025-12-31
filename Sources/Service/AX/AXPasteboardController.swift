@@ -257,6 +257,6 @@ class PasteboardDataProvider: NSObject, NSPasteboardItemDataProvider {
 
     func pasteboard(_: NSPasteboard?, item: NSPasteboardItem, provideDataForType type: NSPasteboard.PasteboardType) {
         wasRequested = true
-        item.setString(text, forType: type)
+        // item.setString(text, forType: type)
     }
 }

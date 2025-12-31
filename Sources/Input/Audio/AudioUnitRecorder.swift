@@ -638,9 +638,7 @@ class AudioUnitRecorder: @unchecked Sendable {
     }
 
     private func saveAudioToDatabase(content: String = "", error: String = "") {
-        guard let dir = UserConfigService.shared.audiosDirectory else {
-            return
-        }
+        guard let dir = UserConfigService.shared.audiosDirectory, isRecordingStarted else { return }
 
         if let startTime = recordingStartTime, let stopTime = recordingStopTime {
             let duration = stopTime.timeIntervalSince(startTime)

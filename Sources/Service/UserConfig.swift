@@ -42,6 +42,12 @@ class UserConfigService {
         configDirectory?.appendingPathComponent(appConfigFileName)
     }
 
+    var isFirstLaunch: Bool {
+        guard let dir = configDirectory else { return true }
+        let launchedFile = dir.appendingPathComponent(".launched")
+        return !fileManager.fileExists(atPath: launchedFile.path)
+    }
+
     func saveUserConfig(_ config: UserConfig) {
         guard let fileURL = configFileURL else { return }
 
