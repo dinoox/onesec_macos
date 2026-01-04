@@ -33,6 +33,7 @@ enum MessageType: String, CaseIterable {
     case hotkeyDetectStart = "hotkey_detect_start"
     case hotkeyDetectEnd = "hotkey_detect_end"
     case hotkeyDetectUpdate = "hotkey_detect_update"
+    case personaUpdated = "persona_updated"
 }
 
 struct WebSocketMessage {

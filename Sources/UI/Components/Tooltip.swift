@@ -8,16 +8,20 @@ enum TooltipType {
 
 struct Tooltip: View {
     let content: String
+    let customContent: AnyView?
     let panelID: UUID
     let type: TooltipType
     let showBell: Bool
+    let customIcon: NSImage?
     let onTap: (() -> Void)?
 
-    init(panelID: UUID, content: String, type: TooltipType = .primary, showBell: Bool = true, onTap: (() -> Void)? = nil) {
+    init(panelID: UUID, content: String = "", customContent: AnyView? = nil, type: TooltipType = .primary, showBell: Bool = true, customIcon: NSImage? = nil, onTap: (() -> Void)? = nil) {
         self.panelID = panelID
         self.content = content
+        self.customContent = customContent
         self.type = type
         self.showBell = showBell
+        self.customIcon = customIcon
         self.onTap = onTap
     }
 
@@ -56,14 +60,24 @@ struct Tooltip: View {
 
     var body: some View {
         HStack(spacing: 6) {
-            if showBell {
+            if let nsImage = customIcon {
+                Image(nsImage: nsImage)
+                    .resizable()
+                    .renderingMode(.template)
+                    .foregroundColor(textColor)
+                    .frame(width: 12, height: 12)
+            } else if showBell {
                 Image.systemSymbol("bell")
                     .font(.system(size: 12, weight: .semibold))
                     .foregroundColor(textColor)
             }
-            Text(content)
-                .font(.system(size: 12))
-                .foregroundColor(textColor)
+            if let custom = customContent {
+                custom
+            } else {
+                Text(content)
+                    .font(.system(size: 12))
+                    .foregroundColor(textColor)
+            }
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
@@ -85,9 +99,9 @@ struct Tooltip: View {
 }
 
 extension Tooltip {
-    static func show(content: String, type: TooltipType = .primary, showBell: Bool = true, onTap: (() -> Void)? = nil) {
+    static func show(content: String = "", customContent: AnyView? = nil, type: TooltipType = .primary, showBell: Bool = true, customIcon: NSImage? = nil, onTap: (() -> Void)? = nil) {
         OverlayController.shared.showOverlay { panelID in
-            Tooltip(panelID: panelID, content: content, type: type, showBell: showBell, onTap: onTap)
+            Tooltip(panelID: panelID, content: content, customContent: customContent, type: type, showBell: showBell, customIcon: customIcon, onTap: onTap)
         }
     }
 }

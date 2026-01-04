@@ -24,6 +24,8 @@ class KeyStateTracker {
     private var pressedKeys: Set<Int64> = []
     private var currentModifiers: CGEventFlags = []
     private let modifierMasks: [CGEventFlags] = [.maskCommand, .maskAlternate, .maskControl, .maskShift, .maskSecondaryFn]
+    /// 数字键 1-9 的 keyCode: 18-26 (对应索引 0-8)
+    private static let numberKeyCodes: [Int64] = [18, 19, 20, 21, 23, 22, 26, 28, 25]
     private var cancellables = Set<AnyCancellable>()
 
     /// 当前是否为匹配状态
@@ -44,6 +46,7 @@ class KeyStateTracker {
         KeyConfig(keyCodes: Config.shared.USER_CONFIG.normalKeyCodes, description: "normal", mode: .normal),
         KeyConfig(keyCodes: Config.shared.USER_CONFIG.commandKeyCodes, description: "command", mode: .command),
         KeyConfig(keyCodes: Config.shared.USER_CONFIG.freeKeyCodes, description: "free", mode: .free),
+        KeyConfig(keyCodes: Config.shared.USER_CONFIG.personaKeyCodes, description: "persona", mode: .persona),
     ]
 
     init() {
@@ -170,9 +173,38 @@ class KeyStateTracker {
     }
 
     private func checkMatchStatus(isKeyDown: Bool) -> KeyMatchResult {
-        // 统一查找所有匹配的配置
+        // 检查 persona 模式的快捷键 + 数字键组合
+        let personaConfig = keyConfigs.first { $0.mode == .persona }
+        if let personaKeyCodes = personaConfig?.keyCodes, !personaKeyCodes.isEmpty {
+            let personaKeySet = Set(personaKeyCodes)
+
+            // 检查是否按下了 persona 快捷键
+            if personaKeySet.isSubset(of: pressedKeys) {
+                // 先检查是否有其他模式的快捷键更精确匹配（快捷键更长）
+                // 例如：persona 是 Opt，普通模式是 Fn+Opt，按下 Fn+Opt 应该触发普通模式
+                let hasLongerMatch = keyConfigs
+                    .filter { $0.mode != .persona && !$0.keyCodes.isEmpty }
+                    .contains { Set($0.keyCodes).isSubset(of: pressedKeys) && $0.keyCodes.count > personaKeyCodes.count }
+
+                if !hasLongerMatch {
+                    // 检查是否有数字键被按下
+                    if isKeyDown {
+                        for (index, numberKeyCode) in Self.numberKeyCodes.enumerated() {
+                            if pressedKeys.contains(numberKeyCode) {
+                                PersonaScheduler.shared.setPersona(index: index)
+                                return .startMatch(.persona)
+                            }
+                        }
+                    }
+                    // persona 快捷键匹配但没有数字键，也返回 notMatching，防止触发其他模式
+                    return .notMatching
+                }
+            }
+        }
+
+        // 统一查找所有匹配的配置（排除空 keyCodes，因为空集是任何集合的子集）
         let matchedConfigs = keyConfigs
-            .filter { Set($0.keyCodes).isSubset(of: pressedKeys) }
+            .filter { !$0.keyCodes.isEmpty && Set($0.keyCodes).isSubset(of: pressedKeys) }
 
         let normalConfig = matchedConfigs.first { $0.mode == .normal }
         let isNormalKeyMatched = normalConfig != nil
@@ -311,6 +343,7 @@ class KeyStateTracker {
             KeyConfig(keyCodes: Config.shared.USER_CONFIG.normalKeyCodes, description: "normal", mode: .normal),
             KeyConfig(keyCodes: Config.shared.USER_CONFIG.commandKeyCodes, description: "command", mode: .command),
             KeyConfig(keyCodes: Config.shared.USER_CONFIG.freeKeyCodes, description: "free", mode: .free),
+            KeyConfig(keyCodes: Config.shared.USER_CONFIG.personaKeyCodes, description: "persona", mode: .persona),
         ]
         log.info("✅ KeyStateTracker reload key configs")
     }

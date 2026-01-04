@@ -3,9 +3,12 @@ import Foundation
 struct HTTPResponse {
     let code: Int
     let message: String
-    let data: [String: Any]?
+    let data: Any?
     let timestamp: Int64?
     let success: Bool?
+    
+    var dataDict: [String: Any]? { data as? [String: Any] }
+    var dataArray: [[String: Any]]? { data as? [[String: Any]] }
 }
 
 class HTTPClient {
@@ -66,12 +69,10 @@ class HTTPClient {
             EventBus.shared.publish(.notificationReceived(.authTokenFailed))
         }
 
-        let dataDict = json["data"] as? [String: Any]
-
         return HTTPResponse(
             code: code,
             message: message,
-            data: dataDict,
+            data: json["data"],
             timestamp: json["timestamp"] as? Int64,
             success: json["success"] as? Bool
         )

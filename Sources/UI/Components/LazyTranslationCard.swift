@@ -319,7 +319,7 @@ struct LazyTranslationCard: View {
                     body: ["text": content]
                 )
 
-                guard response.success == true, let data = response.data else {
+                guard response.success == true, let data = response.dataDict else {
                     errorMessage = response.message
                     isLoading = false
                     return

@@ -1,15 +1,20 @@
 import ApplicationServices
 import Cocoa
+import Combine
 import SwiftUI
 
 @MainActor
-class AXSelectionObserver {
+class AXSelectionObserver: ObservableObject {
     static let shared = AXSelectionObserver()
 
     private var observer: AXObserver?
     private var appObserver: NSObjectProtocol?
 
+    @Published var frontmostApp: NSRunningApplication?
+    @Published var isCurrentAppRecorded: Bool = false
+
     private init() {
+        frontmostApp = NSWorkspace.shared.frontmostApplication
         setupAppSwitchObserver()
     }
 
@@ -23,7 +28,9 @@ class AXSelectionObserver {
 
             if let app = notification.userInfo?[NSWorkspace.applicationUserInfoKey] as? NSRunningApplication {
                 log.info("Application switched to: \(app.localizedName ?? "Unknown")")
+
                 Task { @MainActor in
+                    self.frontmostApp = app
                     self.startObserving()
                 }
             }

@@ -13,6 +13,7 @@ enum RecordMode: String {
     case normal
     case command
     case free
+    case persona
 }
 
 struct KeyConfig {
@@ -93,6 +94,9 @@ class KeyEventProcessor {
             }
             if hotkeySettingMode != .free {
                 otherKeyCodesList.append(Config.shared.USER_CONFIG.freeKeyCodes.sorted())
+            }
+            if hotkeySettingMode != .persona {
+                otherKeyCodesList.append(Config.shared.USER_CONFIG.personaKeyCodes.sorted())
             }
 
             let isConflict = otherKeyCodesList.contains { $0 == newKeyCodes }

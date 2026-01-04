@@ -190,6 +190,8 @@ extension UDSClient {
             handlehotkeyDetectStart()
         case .hotkeyDetectEnd:
             handlehotkeyDetectEnd()
+        case .personaUpdated:
+            handlePersonaUpdated()
         default:
             break
         }
@@ -260,6 +262,13 @@ extension UDSClient {
     private func handlehotkeyDetectEnd() {
         Task { @MainActor in
             EventBus.shared.publish(.hotkeyDetectEnded)
+        }
+    }
+
+    private func handlePersonaUpdated() {
+        Task { @MainActor in
+            PersonaScheduler.shared.reloadPersonasFromDatabase()
+            Config.shared.refreshCurrentPersona()
         }
     }
 

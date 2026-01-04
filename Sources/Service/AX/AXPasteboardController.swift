@@ -67,7 +67,7 @@ class AXPasteboardController {
         do {
             let response = try await HTTPClient.shared.post(path: "/audio/update-text", body: body)
             if response.success == true,
-               let extractedTerm = response.data!["extracted_term"] as? String
+               let extractedTerm = response.dataDict!["extracted_term"] as? String
             {
                 EventBus.shared.publish(.hotWordAddRequested(word: extractedTerm))
             }

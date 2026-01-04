@@ -25,8 +25,9 @@ final class DatabaseService {
 
     // Tables
     private let audios = Table("audios")
+    private let personas = Table("personas")
 
-    // Columns
+    // Columns - audios
     private let id = Expression<String>("id")
     private let sessionID = Expression<String>("session_id")
     private let userID = Expression<Int>("user_id")
@@ -35,6 +36,19 @@ final class DatabaseService {
     private let error = Expression<String?>("error")
     private let content = Expression<String?>("content")
     private let version = Expression<String?>("version")
+
+    // Columns - personas
+    private let personaId = Expression<Int>("id")
+    private let personaUserId = Expression<Int?>("user_id")
+    private let personaName = Expression<String>("name")
+    private let personaDescription = Expression<String?>("description")
+    private let personaIcon = Expression<String>("icon")
+    private let personaIconSvg = Expression<String?>("icon_svg")
+    private let personaContent = Expression<String>("content")
+    private let personaIsExample = Expression<Bool>("is_example")
+    private let personaCreatedAt = Expression<Int?>("created_at")
+    private let personaUpdatedAt = Expression<Int?>("updated_at")
+
 
     func initialize() throws {
         guard let dbURL = UserConfigService.shared.databaseDirectory else {
@@ -67,6 +81,19 @@ final class DatabaseService {
         try db.run(audios.createIndex(createdAt, ifNotExists: true))
         try db.run(audios.createIndex(sessionID, ifNotExists: true))
         try db.run(audios.createIndex(userID, ifNotExists: true))
+
+        try db.run(personas.create(ifNotExists: true) { t in
+            t.column(personaId, primaryKey: true)
+            t.column(personaUserId)
+            t.column(personaName)
+            t.column(personaDescription)
+            t.column(personaIcon)
+            t.column(personaIconSvg)
+            t.column(personaContent)
+            t.column(personaIsExample)
+            t.column(personaCreatedAt)
+            t.column(personaUpdatedAt)
+        })
     }
 
     // MARK: - Recording Operations
@@ -81,15 +108,15 @@ final class DatabaseService {
                 try db.run(audios.delete())
                 log.info("Cleared all audios before insert")
             }
-            
+
             let query = audios.filter(self.sessionID == sessionID)
             let count = try db.scalar(query.count)
-            
+
             guard count == 0 else {
                 log.info("Session \(sessionID) already has a record, skipping insert")
                 return
             }
-            
+
             let insert = audios.insert(
                 self.id <- UUID().uuidString,
                 self.sessionID <- sessionID,
@@ -267,6 +294,94 @@ final class DatabaseService {
             }
         }
     }
+
+    // MARK: - Persona Operations
+
+    func savePersonas(_ personaList: [Persona]) throws {
+        guard let db = db else {
+            throw DatabaseError.notInitialized
+        }
+
+        try queue.sync {
+            try db.run(personas.delete())
+
+            for persona in personaList {
+                let insert = personas.insert(or: .replace,
+                                             personaId <- persona.id,
+                                             personaUserId <- persona.userId,
+                                             personaName <- persona.name,
+                                             personaDescription <- persona.description,
+                                             personaIcon <- persona.icon,
+                                             personaIconSvg <- persona.iconSvg,
+                                             personaContent <- persona.content,
+                                             personaIsExample <- persona.isExample,
+                                             personaCreatedAt <- persona.createdAt,
+                                             personaUpdatedAt <- persona.updatedAt)
+                try db.run(insert)
+            }
+            log.info("Saved \(personaList.count) personas")
+        }
+    }
+
+    func getAllPersonas() throws -> [Persona] {
+        guard let db = db else {
+            throw DatabaseError.notInitialized
+        }
+
+        return try queue.sync {
+            try db.prepare(personas).map { row in
+                Persona(
+                    id: row[personaId],
+                    userId: row[personaUserId],
+                    name: row[personaName],
+                    description: row[personaDescription],
+                    icon: row[personaIcon],
+                    iconSvg: row[personaIconSvg],
+                    content: row[personaContent],
+                    isExample: row[personaIsExample],
+                    createdAt: row[personaCreatedAt],
+                    updatedAt: row[personaUpdatedAt]
+                )
+            }
+        }
+    }
+
+    func getPersona(id: Int) throws -> Persona? {
+        guard let db = db else {
+            throw DatabaseError.notInitialized
+        }
+
+        return try queue.sync {
+            let query = personas.filter(personaId == id)
+            guard let row = try db.pluck(query) else {
+                return nil
+            }
+            return Persona(
+                id: row[personaId],
+                userId: row[personaUserId],
+                name: row[personaName],
+                description: row[personaDescription],
+                icon: row[personaIcon],
+                iconSvg: row[personaIconSvg],
+                content: row[personaContent],
+                isExample: row[personaIsExample],
+                createdAt: row[personaCreatedAt],
+                updatedAt: row[personaUpdatedAt]
+            )
+        }
+    }
+
+    func clearAllPersonas() throws {
+        guard let db = db else {
+            throw DatabaseError.notInitialized
+        }
+
+        try queue.sync {
+            try db.run(personas.delete())
+            log.info("All personas cleared")
+        }
+    }
+
 }
 
 // MARK: - Data Models

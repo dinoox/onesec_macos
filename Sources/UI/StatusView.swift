@@ -37,9 +37,11 @@ extension StatusView {
     private func handleEvent(_ event: AppEvent) {
         switch event {
         case let .recordingCacheStarted(newMode):
+            log.info("Receive recordingCacheStarted with state: \(recordState)")
             guard recordState == .idle else { return }
             mode = newMode
             recordState = .recording
+            activePanelIfNeeded()
         case .recordingCacheTimeout, .recordingCancelled:
             recordState = .idle
             volume = 0
@@ -49,9 +51,7 @@ extension StatusView {
         case let .recordingStarted(newMode):
             mode = newMode
             recordState = .recording
-            if Config.shared.USER_CONFIG.setting.hideStatusPanel {
-                StatusPanelManager.shared.showPanel()
-            }
+            activePanelIfNeeded()
             overlay.hideOverlays(.notificationSystem)
         case let .recordingStopped(isRecordingStarted, shouldSetResponseTimer):
             guard recordState == .recording else { return }
@@ -175,9 +175,9 @@ extension StatusView {
         case let .serverResultReceived(text, _, processMode, polishedText):
             recordState = .idle
 
-      
             Task {
                 let canPaste = await canPasteNow()
+                log.info("canPaste: \(canPaste)")
                 if
                     Config.shared.USER_CONFIG.setting.hideStatusPanel,
                     canPaste || text.isEmpty
@@ -191,7 +191,7 @@ extension StatusView {
                     handleAlert(canPaste: canPaste, processMode: processMode, text: text, polishedText: polishedText)
                 }
 
-                if processMode == .terminal, text.newlineCount >= 1 {
+                if processMode == "TERMINAL", text.newlineCount >= 1 {
                     return
                 }
 
@@ -203,6 +203,16 @@ extension StatusView {
             LinuxCommandCard.show(commands: commands)
         default:
             break
+        }
+    }
+
+    private func activePanelIfNeeded() {
+        if Config.shared.USER_CONFIG.setting.hideStatusPanel {
+            if !AXSelectionObserver.shared.isCurrentAppRecorded {
+                Tooltip.show(content: "当前处于\(Config.shared.CURRENT_PERSONA?.name ?? "默认")模式", type: .plain)
+                AXSelectionObserver.shared.isCurrentAppRecorded = true
+            }
+            StatusPanelManager.shared.showPanel()
         }
     }
 
@@ -233,19 +243,24 @@ extension StatusView {
         return await AXPasteProbe.isPasteAllowed()
     }
 
-    private func handleAlert(canPaste: Bool, processMode: TextProcessMode, text: String, polishedText: String) {
+    private func handleAlert(canPaste: Bool, processMode: String, text: String, polishedText: String) {
         var cardWidth: CGFloat = getTextCardWidth(text: text)
 
+        let isTranslateMode = processMode == "CUSTOM_2" || processMode == "TRANSLATE"
+        let isTerminalMode = processMode == "TERMINAL"
+
+        log.info("isTranslateMode: \(isTranslateMode), isTerminalMode: \(isTerminalMode)")
+
         if canPaste {
-            if processMode == .translate {
+            if isTranslateMode {
                 guard Config.shared.USER_CONFIG.setting.showComparison else { return }
                 ContentCard<EmptyView>.show(title: "识别内容", content: polishedText, onTap: nil, actionButtons: nil, cardWidth: cardWidth, spacingX: 8, spacingY: 14, panelType: .translate(.above), canPaste: canPaste)
-            } else if processMode == .terminal, text.newlineCount >= 1 {
+            } else if isTerminalMode, text.newlineCount >= 1 {
                 LinuxCommandCard.show(commands: [LinuxCommand(distro: "", command: text, displayName: "")])
             }
         } else {
             cardWidth = cardWidth < 260 ? 260 : cardWidth
-            if processMode == .translate {
+            if isTranslateMode {
                 guard Config.shared.USER_CONFIG.setting.showComparison else { return }
                 MultiContentCard.show(title: "执行结果", items: [
                     ContentItem(title: "原文", content: polishedText),

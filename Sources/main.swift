@@ -14,8 +14,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         connectionCenter = ConnectionCenter.shared
         connectionCenter.initialize()
-        StatusPanelManager.shared.orderFront()
         try? DatabaseService.shared.initialize()
+        StatusPanelManager.shared.orderFront()
 
         Task { @MainActor in
             AXSelectionObserver.shared.startObserving()
@@ -23,6 +23,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         SyncScheduler.shared.start()
+        PersonaScheduler.shared.checkAndFetchIfNeeded()
     }
 }
 

@@ -16,10 +16,11 @@ struct StatusIndicator: View {
 
     private var overlay: OverlayController { OverlayController.shared }
     private var menuBuilder: MenuBuilder { .shared }
+    private var axObserver: AXSelectionObserver { .shared }
+    @ObservedObject private var config = Config.shared
 
     @State private var isHovered: Bool = false
     @State private var tooltipPanelId: UUID?
-    @State private var isTranslateMode: Bool = Config.shared.TEXT_PROCESS_MODE == .translate
 
     @State private var networkStatus: IndicatorNetworkStatus = ConnectionCenter.shared.indicatorNetworkStatus
     @State private var rippleId: UUID = .init()
@@ -28,7 +29,7 @@ struct StatusIndicator: View {
 
     private var modeColor: Color {
         switch mode {
-        case .normal, .free: auroraGreen
+        case .normal, .free, .persona: auroraGreen
         case .command: starlightYellow
         }
     }
@@ -132,17 +133,31 @@ struct StatusIndicator: View {
 
             // 内圆
             Group {
+                // 空闲
                 if state == .idle {
-                    if isTranslateMode {
-                        Text("译")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(borderGrey)
-                    } else {
-                        Circle()
-                            .fill(networkBorderColor)
-                            .frame(width: outerSize, height: outerSize)
-                            .scaleEffect(innerScale)
+                    ZStack {
+                        if let persona = config.CURRENT_PERSONA,
+                           persona.id != 1,
+                           let svgString = persona.iconSvg,
+                           let svgData = svgString.data(using: .utf8),
+                           let nsImage = NSImage(data: svgData)
+                        {
+                            Image(nsImage: nsImage)
+                                .resizable()
+                                .renderingMode(.template)
+                                .foregroundColor(networkBorderColor)
+                                .frame(width: 12, height: 12)
+                                .id("persona-\(persona.id)")
+                                .transition(.scale.combined(with: .opacity))
+                        } else {
+                            Circle()
+                                .fill(networkBorderColor)
+                                .frame(width: outerSize, height: outerSize)
+                                .scaleEffect(innerScale)
+                                .transition(.scale.combined(with: .opacity))
+                        }
                     }
+                    .animation(.quickSpringAnimation, value: config.CURRENT_PERSONA?.id)
                 } else if state == .recording {
                     // 录音圆
                     Circle()
@@ -262,9 +277,6 @@ struct StatusIndicator: View {
                 menuBuilder.showMenu(in: StatusPanelManager.shared.getPanel().contentView!)
             }
             .opacity(fadeOpacity)
-            .onReceive(Config.shared.$TEXT_PROCESS_MODE) { mode in
-                isTranslateMode = mode == .translate
-            }
             .onReceive(
                 EventBus.shared.eventSubject
                     .receive(on: DispatchQueue.main)

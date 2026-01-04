@@ -21,6 +21,9 @@ class SoundService: @unchecked Sendable {
 
     private var audioPlayers: [SoundType: AVAudioPlayer] = [:]
 
+    /// Flag to skip the next recordingStarted sound after recordingCacheStarted
+    private var skipNextRecordingStartedSound = false
+
     private init() {}
 
     func initialize() {
@@ -29,8 +32,18 @@ class SoundService: @unchecked Sendable {
             .sink { [weak self] event in
                 guard let self else { return }
                 switch event {
-                case .recordingStarted: playSound(.open)
-                case .recordingStopped: playSound(.close)
+                case .recordingCacheStarted:
+                    skipNextRecordingStartedSound = true
+                    playSound(.open)
+                case .recordingStarted:
+                    guard !skipNextRecordingStartedSound else { return }
+                    playSound(.open)
+                case .recordingStopped:
+                    if skipNextRecordingStartedSound {
+                        skipNextRecordingStartedSound = false
+                    }
+
+                    playSound(.close)
                 case let .notificationReceived(notificationType):
                     if notificationType.shouldPlaySound { playSound(.notification) }
                 default:

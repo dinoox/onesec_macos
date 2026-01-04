@@ -6,13 +6,11 @@ final class MenuBuilder {
     static let shared = MenuBuilder()
     private var overlay: OverlayController { OverlayController.shared }
     private var audioDeviceManager: AudioDeviceManager = .shared
+    private var axObserver: AXSelectionObserver { AXSelectionObserver.shared }
 
-    @objc private func handleTranslateModeToggle() {
-        if Config.shared.TEXT_PROCESS_MODE == .translate {
-            Config.shared.TEXT_PROCESS_MODE = .auto
-        } else {
-            Config.shared.TEXT_PROCESS_MODE = .translate
-        }
+    @objc private func handlePersonaSelect(_ sender: NSMenuItem) {
+        let personaId = sender.tag
+        PersonaScheduler.shared.setPersona(personaId: personaId == 0 ? nil : personaId)
     }
 
     @objc private func handleAudioDeviceChange(_ sender: NSMenuItem) {
@@ -21,6 +19,8 @@ final class MenuBuilder {
 
     func showMenu(in view: NSView) {
         let menu = NSMenu()
+
+        let currentPersona = Config.shared.CURRENT_PERSONA
 
         // 音频设备选择
         let audioItem = NSMenuItem(title: "麦克风", action: nil, keyEquivalent: "")
@@ -41,10 +41,25 @@ final class MenuBuilder {
         menu.addItem(audioItem)
         menu.addItem(NSMenuItem.separator())
 
-        let translateItem = NSMenuItem(title: "翻译模式", action: #selector(handleTranslateModeToggle), keyEquivalent: "")
-        translateItem.target = self
-        translateItem.state = Config.shared.TEXT_PROCESS_MODE == .translate ? .on : .off
-        menu.addItem(translateItem)
+        // 人设模式选择
+        let personaItem = NSMenuItem(title: "人设模式", action: nil, keyEquivalent: "")
+        let personaSubmenu = NSMenu()
+
+        // 当前模式描述
+        let personas = PersonaScheduler.shared.personas
+
+        // 人设列表
+        for persona in personas {
+            let item = NSMenuItem(title: persona.name, action: #selector(handlePersonaSelect(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = persona.id
+            let isSelected = currentPersona?.id == persona.id || (currentPersona == nil && persona.id == 1)
+            item.state = isSelected ? .on : .off
+            personaSubmenu.addItem(item)
+        }
+
+        personaItem.submenu = personaSubmenu
+        menu.addItem(personaItem)
 
         menu.update()
         let location = NSPoint(x: view.bounds.midX - menu.size.width / 2, y: 40)

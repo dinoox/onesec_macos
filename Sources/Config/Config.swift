@@ -15,7 +15,7 @@ class Config: ObservableObject {
     @Published var UDS_CHANNEL: String = ""
     @Published var SERVER: String = ""
 
-    @Published var TEXT_PROCESS_MODE: TextProcessMode = .auto
+    @Published var CURRENT_PERSONA: Persona?
     @Published var USER_CONFIG = UserConfigService.shared.loadUserConfig() {
         didSet {
             if oldValue.theme != USER_CONFIG.theme {
@@ -62,37 +62,19 @@ class Config: ObservableObject {
     func isReleaseMode() -> Bool {
         return SERVER.contains { $0.isLetter }
     }
-}
 
-enum TextProcessMode: String, CaseIterable {
-    case auto = "AUTO"
-    case translate = "TRANSLATE"
-    case format = "FORMAT"
-    case terminal = "TERMINAL"
-
-    var displayName: String {
-        switch self {
-        case .auto:
-            "自动风格"
-        case .translate:
-            "翻译风格"
-        case .format:
-            "整理风格"
-        case .terminal:
-            "终端风格"
+    func refreshCurrentPersona() {
+        guard let personaId = CURRENT_PERSONA?.id else {
+            log.warning("No current persona to refresh")
+            return
         }
-    }
 
-    var description: String {
-        switch self {
-        case .auto:
-            "智能判断, 一键省心"
-        case .translate:
-            "翻译文本, 一键省心"
-        case .format:
-            "结构重组, 深度优化"
-        case .terminal:
-            "终端风格, 一键省心"
+        if let updatedPersona = try? DatabaseService.shared.getPersona(id: personaId) {
+            CURRENT_PERSONA = updatedPersona
+            log.info("Persona refreshed: \(updatedPersona.name)")
+        } else {
+            CURRENT_PERSONA = PersonaScheduler.shared.personas.first { $0.id == 1 }
+            log.warning("Persona not found, set to default")
         }
     }
 }
@@ -169,6 +151,16 @@ struct UserConfig: Codable {
             }
         }
         return [63, 49] // 默认 fn+space
+    }
+
+    var personaKeyCodes: [Int64] {
+        for config in hotkeyConfigs {
+            if config.mode == "persona" {
+                let keyString = config.hotkeyCombination.joined(separator: "+")
+                return KeyMapper.parseKeyString(keyString) ?? []
+            }
+        }
+        return []
     }
 
     struct Environment: Codable {

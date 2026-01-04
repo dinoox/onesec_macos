@@ -113,7 +113,7 @@ class SyncScheduler {
                 body: [:]
             )
 
-            if let data = whitelistResponse.data {
+            if let data = whitelistResponse.dataDict {
                 UserConfigService.shared.saveData(data, filename: "zero_width_char_whitelisted_apps.json")
 
                 if let apps = data["apps"] as? [[String: Any]] {
@@ -128,7 +128,7 @@ class SyncScheduler {
                 body: [:]
             )
 
-            if let data = blacklistResponse.data {
+            if let data = blacklistResponse.dataDict {
                 UserConfigService.shared.saveData(data, filename: "ax_blacklisted_apps.json")
 
                 if let apps = data["apps"] as? [[String: Any]] {

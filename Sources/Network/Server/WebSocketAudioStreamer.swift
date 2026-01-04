@@ -66,7 +66,8 @@ class WebSocketAudioStreamer: @unchecked Sendable {
     // 空闲超时配置
     // 控制空闲时间超过 30 分钟后, 断开连接
     private var idleTimeoutTask: Task<Void, Never>?
-    private let idleTimeoutDuration: TimeInterval = 30 * 60
+    private let idleTimeoutDuration: TimeInterval = 5 * 60
+    // private let idleTimeoutDuration: TimeInterval = 30 * 60
 
     // 上下文发送任务
     // 确保 StopRecording 时, 上下文已经发送完毕
@@ -227,7 +228,7 @@ extension WebSocketAudioStreamer {
 
         let data: [String: Any] = [
             "recognition_mode": sendMode.rawValue,
-            "mode": Config.shared.TEXT_PROCESS_MODE.rawValue,
+            "mode": "CUSTOM_\(Config.shared.CURRENT_PERSONA?.id ?? 1)",
         ]
 
         isRecordingStartConfirmed = false
@@ -421,7 +422,7 @@ extension WebSocketAudioStreamer {
                 polishedText = text ?? ""
             }
 
-            EventBus.shared.publish(.serverResultReceived(summary: summary, interactionID: interactionID, processMode: TextProcessMode(rawValue: processMode) ?? .auto, polishedText: polishedText ?? ""))
+            EventBus.shared.publish(.serverResultReceived(summary: summary, interactionID: interactionID, processMode: processMode, polishedText: polishedText ?? ""))
 
         case .terminalLinuxChoice:
             cancelResponseTimeoutTimer()
@@ -523,6 +524,10 @@ extension WebSocketAudioStreamer {
     }
 
     private func calculateResponseTimeout() -> TimeInterval {
+        if Config.shared.CURRENT_PERSONA?.id != 1 {
+            return 30
+        }
+
         var timeout: TimeInterval
         let mode = ConnectionCenter.shared.currentRecordingSessionMode
         let duration = ConnectionCenter.shared.currentRecordingSessionDuration

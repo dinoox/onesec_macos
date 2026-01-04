@@ -12,9 +12,9 @@ class AXTranslationAccessor {
     private static var cancellable: AnyCancellable?
 
     static func setupMouseUpListener() {
-        cancellable = Config.shared.$TEXT_PROCESS_MODE
-            .sink { mode in
-                if mode == .translate {
+        cancellable = Config.shared.$CURRENT_PERSONA
+            .sink { persona in
+                if persona?.name == "翻译" {
                     startMonitoring()
                 } else {
                     stopMonitoring()

@@ -139,7 +139,9 @@ class InputController {
 
         switch keyEventProcessor.handlekeyEvent(type: type, event: event) {
         case let .startMatch(mode):
-            startRecording(mode: mode)
+            if mode != .persona {
+                startRecording(mode: mode)
+            }
             return nil
         case let .endMatch(mode):
             if mode == .normal, audioRecorder.currentRecordingDuration() < 0.5 {
@@ -158,16 +160,14 @@ class InputController {
             } else {
                 stopRecording()
             }
-            return isSpaceKey ? nil : Unmanaged.passUnretained(event)
+            return nil
         case let .modeUpgrade(from, to):
             pendingStopTask?.cancel()
             pendingStopTask = nil
             modeUpgrade(from: from, to: to)
             return isSpaceKey ? nil : Unmanaged.passUnretained(event)
-        case .throttled, .notMatching:
+        case .throttled, .notMatching, .stillMatching:
             return Unmanaged.passUnretained(event)
-        case .stillMatching:
-            return nil
         }
     }
 
