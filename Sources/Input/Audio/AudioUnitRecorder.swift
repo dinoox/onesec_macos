@@ -631,6 +631,9 @@ class AudioUnitRecorder: @unchecked Sendable {
 
     func handleModeUpgrade(from _: RecordMode, to: RecordMode) {
         if isRecordingStarted {
+            if to == .command {
+                recordMode = to
+            }
             EventBus.shared.publish(.modeUpgraded(from: .normal, to: to))
         } else if to != .normal {
             recordMode = to
@@ -662,8 +665,8 @@ class AudioUnitRecorder: @unchecked Sendable {
             try wavData.write(to: fileURL)
             let clearBeforeInsert = Config.shared.USER_CONFIG.setting.historyRetention == "never" && !error.isEmpty
             try DatabaseService.shared.saveAudios(sessionID: sessionID, filename: filename, content: content, error: error, clearBeforeInsert: clearBeforeInsert)
-            log.info("Audio saved to file: \(filename) \nError: \(error)\nContent: \(content)")
-            EventBus.shared.publish(.userAudioSaved(sessionID: sessionID, filename: filename))
+            log.info("Audio saved to file: \(filename) \nError: \(error)\nContent: \(content) \nmode: \(recordMode)")
+            EventBus.shared.publish(.userAudioSaved(sessionID: sessionID, filename: filename, mode: recordMode, hasTextSelected: !ConnectionCenter.shared.currentRecordingAppContext.focusContext.selectedText.isEmpty))
         } catch {
             log.error("Failed to save recording: \(error)")
         }

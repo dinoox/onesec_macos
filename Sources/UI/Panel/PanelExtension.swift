@@ -222,8 +222,8 @@ struct HoverView: NSViewRepresentable {
 
 extension View {
     @ViewBuilder
-    func compatibleHover(onHover: @escaping (Bool) -> Void) -> some View {
-        if ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 11 {
+    func compatibleHover(useBackground: Bool = false, onHover: @escaping (Bool) -> Void) -> some View {
+        if ProcessInfo.processInfo.operatingSystemVersion.majorVersion < 11 || useBackground {
             background(HoverView(onHover: onHover))
         } else {
             self.onHover(perform: onHover)

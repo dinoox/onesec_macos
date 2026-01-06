@@ -239,7 +239,6 @@ extension StatusView {
         // 对于 AX 黑名单应用
         // 使用粘贴探针检测是否可以粘贴
         log.info("Fallback to paste probe")
-
         return await AXPasteProbe.isPasteAllowed()
     }
 
@@ -248,8 +247,6 @@ extension StatusView {
 
         let isTranslateMode = processMode == "CUSTOM_2" || processMode == "TRANSLATE"
         let isTerminalMode = processMode == "TERMINAL"
-
-        log.info("isTranslateMode: \(isTranslateMode), isTerminalMode: \(isTerminalMode)")
 
         if canPaste {
             if isTranslateMode {

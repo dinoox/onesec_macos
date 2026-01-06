@@ -42,7 +42,7 @@ enum AppEvent {
     case mouseScreenChanged(screen: NSScreen)
     case recordingContextUpdated(context: AppContext)
     case audioDeviceChanged
-    case userAudioSaved(sessionID: String, filename: String)
+    case userAudioSaved(sessionID: String, filename: String, mode: RecordMode, hasTextSelected: Bool)
 }
 
 class EventBus: @unchecked Sendable {

@@ -4,6 +4,7 @@ enum TooltipType {
     case primary
     case error
     case plain
+    case plainSecondary
 }
 
 struct Tooltip: View {
@@ -33,6 +34,8 @@ struct Tooltip: View {
             return Color.overlaySecondaryBackground
         case .plain:
             return Color.overlayBackground
+        case .plainSecondary:
+            return Color.overlayBackground
         }
     }
 
@@ -44,6 +47,8 @@ struct Tooltip: View {
             return .black
         case .plain:
             return Color.overlayText
+        case .plainSecondary:
+            return Color.overlaySecondaryText
         }
     }
 
@@ -53,7 +58,7 @@ struct Tooltip: View {
             return Color.overlayBorder.opacity(0.5)
         case .error:
             return Color.overlayBorder.opacity(0.8)
-        case .plain:
+        case .plain, .plainSecondary:
             return Color.overlayBorder.opacity(0.8)
         }
     }

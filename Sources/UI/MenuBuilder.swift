@@ -42,7 +42,7 @@ final class MenuBuilder {
         menu.addItem(NSMenuItem.separator())
 
         // 人设模式选择
-        let personaItem = NSMenuItem(title: "人设模式", action: nil, keyEquivalent: "")
+        let personaItem = NSMenuItem(title: "输出模式", action: nil, keyEquivalent: "")
         let personaSubmenu = NSMenu()
 
         // 当前模式描述

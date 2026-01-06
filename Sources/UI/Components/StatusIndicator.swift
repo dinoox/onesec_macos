@@ -238,7 +238,7 @@ struct StatusIndicator: View {
             .animation(.quickSpringAnimation, value: outerSize)
             .animation(.quickSpringAnimation, value: isHovered)
             .animation(.quickSpringAnimation, value: state)
-            .compatibleHover { hovering in
+            .compatibleHover(useBackground: true) { hovering in
                 if isFreeRecording {
                     Task { @MainActor in
                         StatusPanelManager.shared.ignoresMouseEvents(ignore: false)

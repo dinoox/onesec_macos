@@ -66,8 +66,7 @@ class WebSocketAudioStreamer: @unchecked Sendable {
     // 空闲超时配置
     // 控制空闲时间超过 30 分钟后, 断开连接
     private var idleTimeoutTask: Task<Void, Never>?
-    private let idleTimeoutDuration: TimeInterval = 5 * 60
-    // private let idleTimeoutDuration: TimeInterval = 30 * 60
+    private let idleTimeoutDuration: TimeInterval = 30 * 60
 
     // 上下文发送任务
     // 确保 StopRecording 时, 上下文已经发送完毕

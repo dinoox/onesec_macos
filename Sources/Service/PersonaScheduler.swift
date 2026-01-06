@@ -124,15 +124,15 @@ class PersonaScheduler {
 
             let content = AnyView(
                 HStack(spacing: 0) {
-                    Text("已切换到")
-                    Text(persona.name).foregroundColor(.overlayPrimary)
-                    Text("输出模式")
+                    Text("已切换到").foregroundColor(.overlaySecondaryText)
+                    Text(persona.name).foregroundColor(.overlayText)
+                    Text("输出模式").foregroundColor(.overlaySecondaryText)
                 }
                 .font(.system(size: 12))
                 .foregroundColor(.overlayText)
             )
 
-            Tooltip.show(customContent: content, type: .plain, showBell: false, customIcon: customIcon)
+            Tooltip.show(customContent: content, type: .plainSecondary, showBell: false, customIcon: customIcon)
         }
     }
 }

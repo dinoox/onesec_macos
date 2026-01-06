@@ -47,7 +47,7 @@ final class UDSClient: @unchecked Sendable {
 
                 case let .hotkeyDetectUpdated(hotkeyCombination, isCompleted): self?.sendHotkeyDetectUpdate(hotkeyCombination: hotkeyCombination, isCompleted: isCompleted)
 
-                case let .userAudioSaved(sessionID, filename): self?.sendUserAudioSaved(sessionID: sessionID, filename: filename)
+                case let .userAudioSaved(sessionID, filename, mode, hasTextSelected): self?.sendUserAudioSaved(sessionID: sessionID, filename: filename, mode: mode, hasTextSelected: hasTextSelected)
 
                 case .recordingInterrupted: self?.sendRecordingInterrupted()
 
@@ -344,12 +344,14 @@ extension UDSClient {
         sendJSONMessage(WebSocketMessage.create(type: .hotkeySettingResult, data: data).toJSON())
     }
 
-    func sendUserAudioSaved(sessionID: String, filename: String) {
+    func sendUserAudioSaved(sessionID: String, filename: String, mode: RecordMode, hasTextSelected: Bool) {
         guard case .connected = connectionState else { return }
 
         let data: [String: Any] = [
             "session_id": sessionID,
             "filename": filename,
+            "mode": mode.rawValue,
+            "has_text_selected": hasTextSelected,
         ]
 
         sendJSONMessage(WebSocketMessage.create(type: .userAudioSaved, data: data).toJSON())

@@ -161,7 +161,7 @@ class AXPasteboardController {
     }
 
     static func pasteTextToActiveApp(_ text: String) async {
-        log.info("Paste Text To Active App: \(text)")
+        log.info("Paste Text To Active App: \(NSWorkspace.shared.frontmostApplication?.localizedName ?? "") \(text)")
 
         let pasteboard = NSPasteboard.general
         let oldContents = pasteboard.string(forType: .string)
@@ -255,7 +255,7 @@ class PasteboardDataProvider: NSObject, NSPasteboardItemDataProvider {
         self.text = text
     }
 
-    func pasteboard(_: NSPasteboard?, item: NSPasteboardItem, provideDataForType type: NSPasteboard.PasteboardType) {
+    func pasteboard(_: NSPasteboard?, item _: NSPasteboardItem, provideDataForType _: NSPasteboard.PasteboardType) {
         wasRequested = true
         // item.setString(text, forType: type)
     }
