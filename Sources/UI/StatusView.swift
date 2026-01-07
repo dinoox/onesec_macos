@@ -173,17 +173,7 @@ extension StatusView {
         case let .serverResultReceived(text, _, processMode, polishedText):
             recordState = .idle
 
-            let pasteTask = Task {
-                if processMode == "TERMINAL", text.newlineCount >= 1 {
-                    return
-                }
-
-                await AXPasteboardController.pasteTextToActiveApp(text + (isAppShouldTestWithZeroWidthChar() ? "\u{200B}" : ""))
-            }
-
             Task {
-                await pasteTask.value
-
                 let canPaste = await canPasteNow()
                 log.info("canPaste: \(canPaste)")
                 if
@@ -195,7 +185,15 @@ extension StatusView {
                 if text.isEmpty {
                     return
                 }
-                handleAlert(canPaste: canPaste, processMode: processMode, text: text, polishedText: polishedText)
+                defer {
+                    handleAlert(canPaste: canPaste, processMode: processMode, text: text, polishedText: polishedText)
+                }
+
+                if processMode == "TERMINAL", text.newlineCount >= 1 {
+                    return
+                }
+
+                await AXPasteboardController.pasteTextToActiveApp(text)
             }
         case let .terminalLinuxChoice(_, _, _, commands):
             recordState = .idle
@@ -217,7 +215,6 @@ extension StatusView {
         // 首先根据白名单使用零宽字符复制测试方法
         if isAppShouldTestWithZeroWidthChar() {
             log.info("Use zero width char paste test")
-            try? await sleep(100)
             return await AXPasteboardController.whasTextInputFocus()
         }
 

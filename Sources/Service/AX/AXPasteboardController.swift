@@ -111,7 +111,7 @@ class AXPasteboardController {
         let pasteboard = NSPasteboard.general
 
         // 保存原始剪贴板状态
-        let oldContents: String? = safeGetPasteboardString(pasteboard)
+        let oldContents: String? = pasteboard.string(forType: .string)
         let oldChangeCount = pasteboard.changeCount
 
         // 模拟 Cmd+C 复制
@@ -120,12 +120,7 @@ class AXPasteboardController {
 
         // 等待复制功能完成
         try? await sleep(150)
-        let copiedText = safeGetPasteboardString(pasteboard)
-
-        if copiedText == "\u{200B}" {
-            log.debug("复制的内容是零宽")
-            return nil
-        }
+        let copiedText = pasteboard.string(forType: .string)
 
         // 恢复原剪贴板内容
         restorePasteboard(oldContents, oldChangeCount)
@@ -138,24 +133,27 @@ class AXPasteboardController {
     static func whasTextInputFocus() async -> Bool {
         let testMarker = "\u{200B}"
         let pasteboard = NSPasteboard.general
-        let oldContents = safeGetPasteboardString(pasteboard)
+        let oldContents = pasteboard.string(forType: .string)
+
+        // if await copyCurrentSelectionAndRestore() != nil {
+        //     return true
+        // }
+
+        pasteboard.clearContents()
+        pasteboard.setString(testMarker, forType: .string)
+
         let oldChangeCount = pasteboard.changeCount
 
+        simulatePaste()
         simulateShiftLeft()
         simulateCopy()
 
-        try? await sleep(300)
+        try? await sleep(150)
 
         // 当为选中文本时,  changeCount 依旧会改变
         // 所以这里判断当前复制的新内容是否为零宽字符
-        let isZeroCharNotChange = safeGetPasteboardString(pasteboard) == testMarker
+        let isZeroCharNotChange = pasteboard.string(forType: .string) == testMarker
         // simulateUndo()
-        // if let keyDown = CGEvent(keyboardEventSource: nil, virtualKey: 0x33, keyDown: true),
-        //    let keyUp = CGEvent(keyboardEventSource: nil, virtualKey: 0x33, keyDown: false)
-        // {
-        //     keyDown.post(tap: .cghidEventTap)
-        //     keyUp.post(tap: .cghidEventTap)
-        // }
 
         defer { restorePasteboard(oldContents) }
 
@@ -166,7 +164,7 @@ class AXPasteboardController {
         log.info("Paste Text To Active App: \(NSWorkspace.shared.frontmostApplication?.localizedName ?? "") \(text)")
 
         let pasteboard = NSPasteboard.general
-        let oldContents = safeGetPasteboardString(pasteboard)
+        let oldContents = pasteboard.string(forType: .string)
 
         pasteboard.clearContents()
         pasteboard.setString(text, forType: .string)
@@ -185,17 +183,6 @@ class AXPasteboardController {
             pasteboard.clearContents()
             pasteboard.setString(oldContents, forType: .string)
         }
-    }
-
-    // 安全获取字符串,避免在剪贴板为空时崩溃
-    private static func safeGetPasteboardString(_ pasteboard: NSPasteboard) -> String? {
-        // 检查剪贴板是否有有效的 items
-        guard let items = pasteboard.pasteboardItems, !items.isEmpty else {
-            return nil
-        }
-
-        // 使用第一个 item 获取字符串
-        return items.first?.string(forType: .string)
     }
 }
 
