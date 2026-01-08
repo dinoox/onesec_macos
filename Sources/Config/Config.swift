@@ -37,7 +37,7 @@ class Config: ObservableObject {
             case "light":
                 NSApp.appearance = NSAppearance(named: .aqua)
             default:
-                NSApp.appearance = nil // 跟随系统
+                NSApp.appearance = nil // System
             }
         }
     }
@@ -52,6 +52,12 @@ class Config: ObservableObject {
         }
         UserConfigService.shared.saveUserConfig(USER_CONFIG)
         log.info("Hotkey updated for: \(mode) -> \(hotkeyCombination)")
+    }
+
+    func savePersonaSetting(_ personaId: Int) {
+        USER_CONFIG.personaID = personaId
+        UserConfigService.shared.saveUserConfig(USER_CONFIG)
+        log.info("Persona config saved: \(personaId)")
     }
 
     func setLastSyncFocusJudgmentSheetTime(_ date: Date) {
@@ -87,6 +93,7 @@ struct UserConfig: Codable {
     var authToken: String
     let user: User
     var hotkeyConfigs: [HotkeyConfig]
+    var personaID: Int
 
     var lastSyncTime: Date? {
         return lastSyncFocusJudgmentSheetTime > 0 ? Date(timeIntervalSince1970: lastSyncFocusJudgmentSheetTime) : nil
@@ -100,6 +107,7 @@ struct UserConfig: Codable {
         authToken = ""
         user = User()
         hotkeyConfigs = []
+        personaID = 1
     }
 
     init(from decoder: Decoder) throws {
@@ -111,6 +119,7 @@ struct UserConfig: Codable {
         authToken = try container.decodeIfPresent(String.self, forKey: .authToken) ?? ""
         user = try container.decodeIfPresent(User.self, forKey: .user) ?? User()
         hotkeyConfigs = try container.decodeIfPresent([HotkeyConfig].self, forKey: .hotkeyConfigs) ?? []
+        personaID = try container.decodeIfPresent(Int.self, forKey: .personaID) ?? 1
     }
 
     enum CodingKeys: String, CodingKey {
@@ -121,6 +130,7 @@ struct UserConfig: Codable {
         case authToken = "auth_token"
         case user
         case hotkeyConfigs = "hotkey_configs"
+        case personaID = "persona_id"
     }
 
     var normalKeyCodes: [Int64] {

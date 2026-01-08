@@ -55,6 +55,13 @@ class PersonaScheduler {
     func reloadPersonasFromDatabase() {
         do {
             personas = try DatabaseService.shared.getAllPersonas()
+            if let persona = personas.first(where: { $0.id == Config.shared.USER_CONFIG.personaID }) {
+                Config.shared.CURRENT_PERSONA = persona
+                log.info("Persona initialized: \(persona.name)")
+            } else if let defaultPersona = personas.first(where: { $0.id == 1 }) {
+                Config.shared.CURRENT_PERSONA = defaultPersona
+                log.info("Persona initialized with default: \(defaultPersona.name)")
+            }
         } catch {
             log.error("人设加载失败: \(error)")
         }
@@ -97,8 +104,10 @@ class PersonaScheduler {
     /// 设置全局 Persona
     /// - Parameter personaId: persona 的 ID
     func setPersona(personaId: Int?) {
+        let effectivePersonaId = personaId ?? 1
         let persona: Persona? = personaId == nil ? nil : personas.first { $0.id == personaId }
         Config.shared.CURRENT_PERSONA = persona
+        Config.shared.savePersonaSetting(effectivePersonaId)
         log.info("🎭 Persona 已设置: \(persona?.name ?? "默认")")
     }
 

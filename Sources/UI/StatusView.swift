@@ -184,7 +184,7 @@ extension StatusView {
             Task {
                 await pasteTask.value
 
-                let canPaste = await canPasteNow()
+                let canPaste = await canPasteNow(text: text)
                 log.info("canPaste: \(canPaste)")
                 if
                     Config.shared.USER_CONFIG.setting.hideStatusPanel,
@@ -212,13 +212,18 @@ extension StatusView {
         }
     }
 
-    private func canPasteNow() async -> Bool {
+    private func canPasteNow(text: String) async -> Bool {
         // 1.
         // 首先根据白名单使用零宽字符复制测试方法
         if isAppShouldTestWithZeroWidthChar() {
+            let element = AXElementAccessor.getFocusedElement()
+            if let element {
+                log.info("Use zero width char paste test with AX")
+                return AXElementAccessor.isEditableElement(element)
+            }
+
             log.info("Use zero width char paste test")
-            try? await sleep(100)
-            return await AXPasteboardController.whasTextInputFocus()
+            return await AXPasteboardController.whasTextInputFocus(text: text)
         }
 
         // 2.

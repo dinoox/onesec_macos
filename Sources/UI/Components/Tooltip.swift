@@ -31,7 +31,7 @@ struct Tooltip: View {
         case .primary:
             return Color.overlayBackground
         case .error:
-            return Color.overlaySecondaryBackground
+            return errorTextColor
         case .plain:
             return Color.overlayBackground
         case .plainSecondary:
@@ -44,7 +44,7 @@ struct Tooltip: View {
         case .primary:
             return .overlaySecondaryPrimary
         case .error:
-            return .black
+            return .white
         case .plain:
             return Color.overlayText
         case .plainSecondary:
